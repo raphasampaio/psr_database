@@ -54,7 +54,6 @@ jobs:
   build-python:
     name: Python Binding (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
-    needs: build
 
     strategy:
       fail-fast: false
@@ -73,10 +72,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
-      - name: Install Python dependencies
-        working-directory: bindings/python
-        run: uv sync
-
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
         run: |
@@ -94,9 +89,17 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-      - name: Test Python import
+      - name: Copy DLL to package (Windows)
+        if: runner.os == 'Windows'
+        run: copy build\bin\libpsr_database.dll bindings\python\psr_database\
+
+      - name: Copy shared library to package (Linux)
+        if: runner.os == 'Linux'
+        run: cp build/lib/libpsr_database.so bindings/python/psr_database/
+
+      - name: Install Python package
         working-directory: bindings/python
-        run: python -c "import psr_database; print(psr_database.__version__)"
+        run: uv sync
 
       - name: Run Python tests
         working-directory: bindings/python

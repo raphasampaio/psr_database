@@ -139,6 +139,15 @@ Test files in `bindings/python/tests/`:
 - `test_result.py` - Result iteration, Row value access
 
 ```bash
+# Build Python binding (specify uv-managed Python on Windows)
+cmake -B build -DPSR_BUILD_PYTHON_BINDING=ON \
+  -DPYTHON_EXECUTABLE="$(uv python find)"
+cmake --build build --config Release
+
+# Copy DLL to package (Windows only)
+cp build/bin/libpsr_database.dll bindings/python/psr_database/
+
+# Run tests
 cd bindings/python
 uv sync
 uv run pytest tests/ -v
@@ -183,5 +192,14 @@ dart test
 ## Platform Notes
 
 - **Windows**: Builds with MSVC or MinGW. DLLs output to `build/bin/`
+  - MinGW builds use static runtime linking for portable binaries
+  - Python binding requires copying `libpsr_database.dll` to package directory
 - **Linux**: Builds with GCC/Clang. Shared libs output to `build/lib/`
 - **macOS**: Similar to Linux, uses `.dylib` extension
+
+## Python Binding Notes
+
+The Python binding uses **uv** for package management:
+- `pyproject.toml` uses `dependency-groups` for dev dependencies
+- Package includes native DLLs via `tool.setuptools.package-data`
+- On Windows, `os.add_dll_directory()` is used to locate bundled DLLs

@@ -8,6 +8,7 @@ add_executable(psr_database_tests
 target_link_libraries(psr_database_tests
     PRIVATE
         psr_database
+        psr_compiler_options
         GTest::gtest_main
         GTest::gmock
 )
@@ -27,6 +28,7 @@ if(PSR_BUILD_C_API)
     target_link_libraries(psr_database_c_tests
         PRIVATE
             psr_database_c
+            psr_compiler_options
             GTest::gtest_main
     )
 

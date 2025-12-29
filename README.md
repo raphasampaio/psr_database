@@ -8,9 +8,9 @@ A cross-platform C++ SQLite wrapper library with bindings for Python, Julia, and
 - Cross-platform support (Windows, Linux, macOS)
 - SQLite embedded via CMake FetchContent
 - Language bindings:
-  - **Python** - pybind11 bindings
-  - **Julia** - Clang.jl-based ccall bindings
-  - **Dart** - dart:ffi bindings
+  - **Python** - pybind11 bindings (uses uv for package management)
+  - **Julia** - ccall bindings via C API
+  - **Dart** - dart:ffi bindings via C API
 - C API for FFI integration with other languages
 
 ## Building
@@ -20,7 +20,8 @@ A cross-platform C++ SQLite wrapper library with bindings for Python, Julia, and
 - CMake 3.21 or higher
 - C++17 compatible compiler:
   - GCC 8+ / Clang 7+ (Linux/macOS)
-  - MSVC 2019+ (Windows)
+  - MSVC 2019+ or MinGW (Windows)
+- [uv](https://docs.astral.sh/uv/) (for Python binding)
 
 ### Basic Build
 
@@ -133,10 +134,16 @@ ctest --test-dir build --output-on-failure
 
 ### Python Tests
 
+Requires [uv](https://docs.astral.sh/uv/) for package management.
+
 ```bash
-# Build Python binding first
-cmake -B build -DPSR_BUILD_PYTHON_BINDING=ON
-cmake --build build
+# Build Python binding (use uv-managed Python)
+cmake -B build -DPSR_BUILD_PYTHON_BINDING=ON \
+  -DPYTHON_EXECUTABLE="$(uv python find)"
+cmake --build build --config Release
+
+# Copy DLL to package (Windows only)
+cp build/bin/libpsr_database.dll bindings/python/psr_database/
 
 # Run tests with uv
 cd bindings/python
