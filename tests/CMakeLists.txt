@@ -12,8 +12,10 @@ target_link_libraries(psr_database_tests
         GTest::gmock
 )
 
+# Use PRE_TEST mode to avoid DLL path issues during build on Windows
 gtest_discover_tests(psr_database_tests
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+    DISCOVERY_MODE PRE_TEST
 )
 
 # C API tests
@@ -29,6 +31,7 @@ if(PSR_BUILD_C_API)
     )
 
     gtest_discover_tests(psr_database_c_tests
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        DISCOVERY_MODE PRE_TEST
     )
 endif()

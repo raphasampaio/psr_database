@@ -1,1 +1,158 @@
 # psr_database
+
+A cross-platform C++ SQLite wrapper library with bindings for Python, Julia, Dart, and Lua.
+
+## Features
+
+- Modern C++17 API with RAII resource management
+- Cross-platform support (Windows, Linux, macOS)
+- SQLite embedded via CMake FetchContent
+- Language bindings:
+  - **Python** - pybind11 bindings
+  - **Julia** - Clang.jl-based ccall bindings
+  - **Dart** - dart:ffi bindings
+  - **Lua** - Lua C API bindings
+- C API for FFI integration with other languages
+
+## Building
+
+### Prerequisites
+
+- CMake 3.21 or higher
+- C++17 compatible compiler:
+  - GCC 8+ / Clang 7+ (Linux/macOS)
+  - MSVC 2019+ (Windows)
+
+### Basic Build
+
+```bash
+# Configure
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+# Build
+cmake --build build --config Release
+
+# Run tests
+ctest --test-dir build -C Release --output-on-failure
+```
+
+### Using CMake Presets
+
+```bash
+# Development build with tests
+cmake --preset dev
+cmake --build build/dev
+
+# Release build
+cmake --preset release
+cmake --build build/release
+```
+
+### Build Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `PSR_BUILD_SHARED` | ON | Build shared library |
+| `PSR_BUILD_TESTS` | ON | Build test suite |
+| `PSR_BUILD_EXAMPLES` | OFF | Build examples |
+| `PSR_BUILD_C_API` | OFF | Build C API wrapper |
+| `PSR_BUILD_PYTHON_BINDING` | OFF | Build Python binding |
+| `PSR_BUILD_LUA_BINDING` | OFF | Build Lua binding |
+
+## Usage
+
+### C++
+
+```cpp
+#include <psr_database/psr_database.h>
+
+psr::Database db(":memory:");
+db.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
+db.execute("INSERT INTO users (name) VALUES (?)", {psr::Value{"Alice"}});
+
+auto result = db.execute("SELECT * FROM users");
+for (const auto& row : result) {
+    std::cout << row.get_string(1).value() << std::endl;
+}
+```
+
+### Python
+
+```python
+from psr_database import Database
+
+db = Database(":memory:")
+db.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
+db.execute("INSERT INTO users (name) VALUES (?)", ["Alice"])
+
+result = db.execute("SELECT * FROM users")
+for row in result:
+    print(row[1])
+```
+
+### Julia
+
+```julia
+using PsrDatabase
+
+db = Database(":memory:")
+execute(db, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
+execute(db, "INSERT INTO users (name) VALUES ('Alice')")
+
+result = execute(db, "SELECT * FROM users")
+for row in result
+    println(row["name"])
+end
+```
+
+### Lua
+
+```lua
+local psr = require("psr_database")
+
+local db = psr.open(":memory:")
+db:execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
+db:execute("INSERT INTO users (name) VALUES ('Alice')")
+
+local result = db:execute("SELECT * FROM users")
+for i = 1, result:row_count() do
+    local row = result:get_row(i)
+    print(row.name)
+end
+```
+
+### Dart
+
+```dart
+import 'package:psr_database/psr_database.dart';
+
+final db = Database.open(':memory:');
+db.execute('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)');
+db.execute("INSERT INTO users (name) VALUES ('Alice')");
+
+final result = db.execute('SELECT * FROM users');
+for (final row in result.toList()) {
+    print(row['name']);
+}
+```
+
+## Project Structure
+
+```
+psr_database/
+├── cmake/                  # CMake modules
+├── include/psr_database/   # Public C++ headers
+├── src/                    # Core library implementation
+├── src_c/                  # C API wrapper
+├── bindings/
+│   ├── python/             # Python binding (pybind11)
+│   ├── julia/              # Julia binding (Clang.jl)
+│   ├── lua/                # Lua binding
+│   └── dart/               # Dart binding (FFI)
+├── tests/                  # Test suite
+└── examples/               # Usage examples
+```
+
+## License
+
+See LICENSE file for details.

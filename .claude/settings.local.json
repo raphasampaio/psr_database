@@ -3,7 +3,14 @@
     "allow": [
       "Bash(cat:*)",
       "Bash(git show:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(cmake:*)",
+      "Bash(./psr_database_tests.exe:*)",
+      "Bash(ctest:*)",
+      "Bash(ls:*)",
+      "Bash(echo:*)",
+      "Bash(cmd /c \"cd C:\\\\Development\\\\Personal\\\\psr_database\\\\build\\\\bin && psr_database_tests.exe --gtest_list_tests\")",
+      "Bash(\"C:/Development/Personal/psr_database/build/bin/psr_database_tests.exe\" --gtest_list_tests)"
     ]
   }
 }
