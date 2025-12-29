@@ -19,12 +19,11 @@ option(PSR_BUILD_EXAMPLES "Build examples" OFF)
 # Binding options
 option(PSR_BUILD_PYTHON_BINDING "Build Python binding" OFF)
 option(PSR_BUILD_JULIA_BINDING "Build Julia binding" OFF)
-option(PSR_BUILD_LUA_BINDING "Build Lua binding" OFF)
 option(PSR_BUILD_DART_BINDING "Build Dart-compatible C API" OFF)
 option(PSR_BUILD_C_API "Build C API wrapper" OFF)
 
 # Auto-enable C API if any FFI binding is requested
-if(PSR_BUILD_DART_BINDING OR PSR_BUILD_LUA_BINDING OR PSR_BUILD_JULIA_BINDING)
+if(PSR_BUILD_DART_BINDING OR PSR_BUILD_JULIA_BINDING)
     set(PSR_BUILD_C_API ON CACHE BOOL "" FORCE)
 endif()
 
@@ -48,7 +47,7 @@ if(PSR_BUILD_C_API)
 endif()
 
 # Language bindings
-if(PSR_BUILD_PYTHON_BINDING OR PSR_BUILD_LUA_BINDING)
+if(PSR_BUILD_PYTHON_BINDING)
     add_subdirectory(bindings)
 endif()
 
