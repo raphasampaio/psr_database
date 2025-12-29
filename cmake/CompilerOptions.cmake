@@ -19,6 +19,14 @@ else()
         -Wpedantic
         -Wno-unused-parameter
     )
+    # Static link runtime libraries on MinGW for portable binaries
+    if(MINGW)
+        target_link_options(psr_compiler_options INTERFACE
+            -static-libgcc
+            -static-libstdc++
+            -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive,-Bdynamic
+        )
+    endif()
 endif()
 
 # Position independent code for shared libraries

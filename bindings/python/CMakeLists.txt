@@ -7,6 +7,7 @@ pybind11_add_module(psr_database_py
 target_link_libraries(psr_database_py
     PRIVATE
         psr_database
+        psr_compiler_options
 )
 
 set_target_properties(psr_database_py PROPERTIES

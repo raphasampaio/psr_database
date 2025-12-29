@@ -124,8 +124,8 @@ PYBIND11_MODULE(_psr_database, m) {
                 return db.execute(sql, values);
             },
             py::arg("sql"), py::arg("params"))
-        .def("last_insert_rowid", &psr::Database::last_insert_rowid)
-        .def("changes", &psr::Database::changes)
+        .def_property_readonly("last_insert_rowid", &psr::Database::last_insert_rowid)
+        .def_property_readonly("changes", &psr::Database::changes)
         .def("begin_transaction", &psr::Database::begin_transaction)
         .def("commit", &psr::Database::commit)
         .def("rollback", &psr::Database::rollback)
