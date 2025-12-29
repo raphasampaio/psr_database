@@ -1,0 +1,26 @@
+add_library(psr_database_c SHARED
+    psr_database_c.cpp
+)
+
+target_compile_definitions(psr_database_c PRIVATE PSR_DATABASE_C_EXPORTS)
+
+target_include_directories(psr_database_c
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(psr_database_c
+    PRIVATE
+        psr_database
+        psr_compiler_options
+)
+
+set_target_properties(psr_database_c PROPERTIES
+    OUTPUT_NAME psr_database_c
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+)
+
+# Alias for use in subdirectories
+add_library(psr::database_c ALIAS psr_database_c)

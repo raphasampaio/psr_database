@@ -1,0 +1,9 @@
+name: PsrDatabaseBindings
+description: FFI bindings for psr_database C API
+output: 'lib/src/generated_bindings.dart'
+headers:
+  entry-points:
+    - '../../src_c/psr_database_c.h'
+preamble: |
+  // Generated bindings for psr_database_c
+  // Do not modify manually

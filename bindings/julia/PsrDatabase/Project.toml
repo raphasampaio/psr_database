@@ -1,0 +1,10 @@
+name = "PsrDatabase"
+uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+authors = ["PSR Database Authors"]
+version = "1.0.0"
+
+[deps]
+Clang = "40e3b903-d033-50b4-a0cc-940c62c95e31"
+
+[compat]
+julia = "1.6"
