@@ -1,18 +1,14 @@
-#include <gtest/gtest.h>
-
-#include <psr_database/database.h>
-
 #include <cstdio>
 #include <filesystem>
+#include <gtest/gtest.h>
+#include <psr_database/database.h>
 #include <string>
 
 namespace fs = std::filesystem;
 
 class DatabaseTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        test_db_path_ = (fs::temp_directory_path() / "psr_test.db").string();
-    }
+    void SetUp() override { test_db_path_ = (fs::temp_directory_path() / "psr_test.db").string(); }
 
     void TearDown() override {
         if (fs::exists(test_db_path_)) {

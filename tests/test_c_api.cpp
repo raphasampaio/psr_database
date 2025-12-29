@@ -1,9 +1,8 @@
-#include <gtest/gtest.h>
-
 #include "psr_database_c.h"
 
 #include <cstdio>
 #include <filesystem>
+#include <gtest/gtest.h>
 #include <string>
 
 namespace fs = std::filesystem;

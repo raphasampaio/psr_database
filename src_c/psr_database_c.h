@@ -10,13 +10,13 @@ extern "C" {
 
 // Platform-specific export macros
 #ifdef _WIN32
-    #ifdef PSR_DATABASE_C_EXPORTS
-        #define PSR_C_API __declspec(dllexport)
-    #else
-        #define PSR_C_API __declspec(dllimport)
-    #endif
+#ifdef PSR_DATABASE_C_EXPORTS
+#define PSR_C_API __declspec(dllexport)
 #else
-    #define PSR_C_API __attribute__((visibility("default")))
+#define PSR_C_API __declspec(dllimport)
+#endif
+#else
+#define PSR_C_API __attribute__((visibility("default")))
 #endif
 
 // Opaque handle types
@@ -76,7 +76,7 @@ PSR_C_API int psr_database_is_open(psr_database_t* db);
  * @return Result handle or NULL on error (caller must free with psr_result_free)
  */
 PSR_C_API psr_result_t* psr_database_execute(psr_database_t* db, const char* sql,
-                                              psr_error_t* error);
+                                             psr_error_t* error);
 
 /**
  * Get the rowid of the last inserted row.
@@ -179,7 +179,7 @@ PSR_C_API int psr_result_is_null(psr_result_t* result, size_t row, size_t col);
  * @return PSR_OK on success, error code otherwise
  */
 PSR_C_API psr_error_t psr_result_get_int(psr_result_t* result, size_t row, size_t col,
-                                          int64_t* value);
+                                         int64_t* value);
 
 /**
  * Get a double value.
@@ -190,7 +190,7 @@ PSR_C_API psr_error_t psr_result_get_int(psr_result_t* result, size_t row, size_
  * @return PSR_OK on success, error code otherwise
  */
 PSR_C_API psr_error_t psr_result_get_double(psr_result_t* result, size_t row, size_t col,
-                                             double* value);
+                                            double* value);
 
 /**
  * Get a string value.
@@ -210,7 +210,7 @@ PSR_C_API const char* psr_result_get_string(psr_result_t* result, size_t row, si
  * @return Pointer to blob data or NULL if not a blob (do not free)
  */
 PSR_C_API const uint8_t* psr_result_get_blob(psr_result_t* result, size_t row, size_t col,
-                                              size_t* size);
+                                             size_t* size);
 
 // ============================================================================
 // Utility Functions

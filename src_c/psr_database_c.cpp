@@ -1,4 +1,5 @@
 #include "psr_database_c.h"
+
 #include "psr_database/database.h"
 #include "psr_database/result.h"
 
@@ -16,18 +17,8 @@ struct psr_database {
 
 struct psr_result {
     psr::Result result;
-    std::vector<std::string> string_cache;  // Cache for string values
 
-    explicit psr_result(psr::Result r) : result(std::move(r)) {
-        // Pre-cache all string values to ensure stable pointers
-        for (size_t row = 0; row < result.row_count(); ++row) {
-            for (size_t col = 0; col < result.column_count(); ++col) {
-                if (auto str = result[row].get_string(col)) {
-                    string_cache.push_back(*str);
-                }
-            }
-        }
-    }
+    explicit psr_result(psr::Result r) : result(std::move(r)) {}
 };
 
 // ============================================================================
@@ -38,19 +29,23 @@ extern "C" {
 
 PSR_C_API psr_database_t* psr_database_open(const char* path, psr_error_t* error) {
     if (!path) {
-        if (error) *error = PSR_ERROR_INVALID_ARGUMENT;
+        if (error)
+            *error = PSR_ERROR_INVALID_ARGUMENT;
         return nullptr;
     }
 
     try {
         auto* db = new psr_database(path);
-        if (error) *error = PSR_OK;
+        if (error)
+            *error = PSR_OK;
         return db;
     } catch (const std::bad_alloc&) {
-        if (error) *error = PSR_ERROR_NO_MEMORY;
+        if (error)
+            *error = PSR_ERROR_NO_MEMORY;
         return nullptr;
     } catch (const std::exception& e) {
-        if (error) *error = PSR_ERROR_DATABASE;
+        if (error)
+            *error = PSR_ERROR_DATABASE;
         return nullptr;
     }
 }
@@ -60,49 +55,58 @@ PSR_C_API void psr_database_close(psr_database_t* db) {
 }
 
 PSR_C_API int psr_database_is_open(psr_database_t* db) {
-    if (!db) return 0;
+    if (!db)
+        return 0;
     return db->db.is_open() ? 1 : 0;
 }
 
 PSR_C_API psr_result_t* psr_database_execute(psr_database_t* db, const char* sql,
-                                              psr_error_t* error) {
+                                             psr_error_t* error) {
     if (!db) {
-        if (error) *error = PSR_ERROR_INVALID_ARGUMENT;
+        if (error)
+            *error = PSR_ERROR_INVALID_ARGUMENT;
         return nullptr;
     }
     if (!sql) {
-        if (error) *error = PSR_ERROR_INVALID_ARGUMENT;
+        if (error)
+            *error = PSR_ERROR_INVALID_ARGUMENT;
         return nullptr;
     }
 
     try {
         auto result = db->db.execute(sql);
         auto* res = new psr_result(std::move(result));
-        if (error) *error = PSR_OK;
+        if (error)
+            *error = PSR_OK;
         return res;
     } catch (const std::bad_alloc&) {
-        if (error) *error = PSR_ERROR_NO_MEMORY;
+        if (error)
+            *error = PSR_ERROR_NO_MEMORY;
         db->last_error = "Out of memory";
         return nullptr;
     } catch (const std::exception& e) {
-        if (error) *error = PSR_ERROR_QUERY;
+        if (error)
+            *error = PSR_ERROR_QUERY;
         db->last_error = e.what();
         return nullptr;
     }
 }
 
 PSR_C_API int64_t psr_database_last_insert_rowid(psr_database_t* db) {
-    if (!db) return 0;
+    if (!db)
+        return 0;
     return db->db.last_insert_rowid();
 }
 
 PSR_C_API int psr_database_changes(psr_database_t* db) {
-    if (!db) return 0;
+    if (!db)
+        return 0;
     return db->db.changes();
 }
 
 PSR_C_API psr_error_t psr_database_begin_transaction(psr_database_t* db) {
-    if (!db) return PSR_ERROR_INVALID_ARGUMENT;
+    if (!db)
+        return PSR_ERROR_INVALID_ARGUMENT;
     try {
         db->db.begin_transaction();
         return PSR_OK;
@@ -113,7 +117,8 @@ PSR_C_API psr_error_t psr_database_begin_transaction(psr_database_t* db) {
 }
 
 PSR_C_API psr_error_t psr_database_commit(psr_database_t* db) {
-    if (!db) return PSR_ERROR_INVALID_ARGUMENT;
+    if (!db)
+        return PSR_ERROR_INVALID_ARGUMENT;
     try {
         db->db.commit();
         return PSR_OK;
@@ -124,7 +129,8 @@ PSR_C_API psr_error_t psr_database_commit(psr_database_t* db) {
 }
 
 PSR_C_API psr_error_t psr_database_rollback(psr_database_t* db) {
-    if (!db) return PSR_ERROR_INVALID_ARGUMENT;
+    if (!db)
+        return PSR_ERROR_INVALID_ARGUMENT;
     try {
         db->db.rollback();
         return PSR_OK;
@@ -135,7 +141,8 @@ PSR_C_API psr_error_t psr_database_rollback(psr_database_t* db) {
 }
 
 PSR_C_API const char* psr_database_error_message(psr_database_t* db) {
-    if (!db) return "Invalid database handle";
+    if (!db)
+        return "Invalid database handle";
     if (!db->last_error.empty()) {
         return db->last_error.c_str();
     }
@@ -151,17 +158,20 @@ PSR_C_API void psr_result_free(psr_result_t* result) {
 }
 
 PSR_C_API size_t psr_result_row_count(psr_result_t* result) {
-    if (!result) return 0;
+    if (!result)
+        return 0;
     return result->result.row_count();
 }
 
 PSR_C_API size_t psr_result_column_count(psr_result_t* result) {
-    if (!result) return 0;
+    if (!result)
+        return 0;
     return result->result.column_count();
 }
 
 PSR_C_API const char* psr_result_column_name(psr_result_t* result, size_t col) {
-    if (!result || col >= result->result.column_count()) return nullptr;
+    if (!result || col >= result->result.column_count())
+        return nullptr;
     return result->result.columns()[col].c_str();
 }
 
@@ -193,27 +203,31 @@ PSR_C_API int psr_result_is_null(psr_result_t* result, size_t row, size_t col) {
 }
 
 PSR_C_API psr_error_t psr_result_get_int(psr_result_t* result, size_t row, size_t col,
-                                          int64_t* value) {
-    if (!result || !value) return PSR_ERROR_INVALID_ARGUMENT;
+                                         int64_t* value) {
+    if (!result || !value)
+        return PSR_ERROR_INVALID_ARGUMENT;
     if (row >= result->result.row_count() || col >= result->result.column_count()) {
         return PSR_ERROR_INDEX_OUT_OF_RANGE;
     }
 
     auto opt = result->result[row].get_int(col);
-    if (!opt) return PSR_ERROR_INVALID_ARGUMENT;
+    if (!opt)
+        return PSR_ERROR_INVALID_ARGUMENT;
     *value = *opt;
     return PSR_OK;
 }
 
 PSR_C_API psr_error_t psr_result_get_double(psr_result_t* result, size_t row, size_t col,
-                                             double* value) {
-    if (!result || !value) return PSR_ERROR_INVALID_ARGUMENT;
+                                            double* value) {
+    if (!result || !value)
+        return PSR_ERROR_INVALID_ARGUMENT;
     if (row >= result->result.row_count() || col >= result->result.column_count()) {
         return PSR_ERROR_INDEX_OUT_OF_RANGE;
     }
 
     auto opt = result->result[row].get_double(col);
-    if (!opt) return PSR_ERROR_INVALID_ARGUMENT;
+    if (!opt)
+        return PSR_ERROR_INVALID_ARGUMENT;
     *value = *opt;
     return PSR_OK;
 }
@@ -223,25 +237,34 @@ PSR_C_API const char* psr_result_get_string(psr_result_t* result, size_t row, si
         return nullptr;
     }
 
-    auto opt = result->result[row].get_string(col);
-    if (!opt) return nullptr;
-    return opt->c_str();
+    // Access the underlying Value directly to get a stable pointer
+    // (get_string() returns by value which would be destroyed)
+    const auto& value = result->result[row][col];
+    if (const auto* str = std::get_if<std::string>(&value)) {
+        return str->c_str();
+    }
+    return nullptr;
 }
 
 PSR_C_API const uint8_t* psr_result_get_blob(psr_result_t* result, size_t row, size_t col,
-                                              size_t* size) {
+                                             size_t* size) {
     if (!result || row >= result->result.row_count() || col >= result->result.column_count()) {
-        if (size) *size = 0;
+        if (size)
+            *size = 0;
         return nullptr;
     }
 
-    auto opt = result->result[row].get_blob(col);
-    if (!opt) {
-        if (size) *size = 0;
-        return nullptr;
+    // Access the underlying Value directly to get a stable pointer
+    // (get_blob() returns by value which would be destroyed)
+    const auto& value = result->result[row][col];
+    if (const auto* blob = std::get_if<std::vector<uint8_t>>(&value)) {
+        if (size)
+            *size = blob->size();
+        return blob->data();
     }
-    if (size) *size = opt->size();
-    return opt->data();
+    if (size)
+        *size = 0;
+    return nullptr;
 }
 
 // ============================================================================
@@ -250,22 +273,22 @@ PSR_C_API const uint8_t* psr_result_get_blob(psr_result_t* result, size_t row, s
 
 PSR_C_API const char* psr_error_string(psr_error_t error) {
     switch (error) {
-        case PSR_OK:
-            return "Success";
-        case PSR_ERROR_INVALID_ARGUMENT:
-            return "Invalid argument";
-        case PSR_ERROR_DATABASE:
-            return "Database error";
-        case PSR_ERROR_QUERY:
-            return "Query error";
-        case PSR_ERROR_NO_MEMORY:
-            return "Out of memory";
-        case PSR_ERROR_NOT_OPEN:
-            return "Database not open";
-        case PSR_ERROR_INDEX_OUT_OF_RANGE:
-            return "Index out of range";
-        default:
-            return "Unknown error";
+    case PSR_OK:
+        return "Success";
+    case PSR_ERROR_INVALID_ARGUMENT:
+        return "Invalid argument";
+    case PSR_ERROR_DATABASE:
+        return "Database error";
+    case PSR_ERROR_QUERY:
+        return "Query error";
+    case PSR_ERROR_NO_MEMORY:
+        return "Out of memory";
+    case PSR_ERROR_NOT_OPEN:
+        return "Database not open";
+    case PSR_ERROR_INDEX_OUT_OF_RANGE:
+        return "Index out of range";
+    default:
+        return "Unknown error";
     }
 }
 

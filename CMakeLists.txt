@@ -61,3 +61,20 @@ endif()
 if(PSR_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
+# Format target
+find_program(CLANG_FORMAT clang-format)
+if(CLANG_FORMAT)
+    file(GLOB_RECURSE ALL_SOURCE_FILES
+        ${CMAKE_SOURCE_DIR}/include/*.h
+        ${CMAKE_SOURCE_DIR}/src/*.cpp
+        ${CMAKE_SOURCE_DIR}/src_c/*.h
+        ${CMAKE_SOURCE_DIR}/src_c/*.cpp
+        ${CMAKE_SOURCE_DIR}/tests/*.cpp
+        ${CMAKE_SOURCE_DIR}/bindings/python/src/*.cpp
+    )
+    add_custom_target(format
+        COMMAND ${CLANG_FORMAT} -i ${ALL_SOURCE_FILES}
+        COMMENT "Formatting code with clang-format"
+    )
+endif()

@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
-
 #include <psr_database/result.h>
-
 #include <vector>
 
 TEST(ResultTest, EmptyResult) {

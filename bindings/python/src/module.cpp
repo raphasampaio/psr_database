@@ -1,8 +1,7 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-
 #include <psr_database/database.h>
 #include <psr_database/result.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 namespace py = pybind11;
 
@@ -97,8 +96,7 @@ PYBIND11_MODULE(_psr_database, m) {
         .def("is_open", &psr::Database::is_open)
         .def("close", &psr::Database::close)
         .def(
-            "execute",
-            [](psr::Database& db, const std::string& sql) { return db.execute(sql); },
+            "execute", [](psr::Database& db, const std::string& sql) { return db.execute(sql); },
             py::arg("sql"))
         .def(
             "execute",
@@ -115,8 +113,7 @@ PYBIND11_MODULE(_psr_database, m) {
                         values.emplace_back(param.cast<std::string>());
                     } else if (py::isinstance<py::bytes>(param)) {
                         std::string bytes = param.cast<std::string>();
-                        values.emplace_back(
-                            std::vector<uint8_t>(bytes.begin(), bytes.end()));
+                        values.emplace_back(std::vector<uint8_t>(bytes.begin(), bytes.end()));
                     } else {
                         throw std::runtime_error("Unsupported parameter type");
                     }
@@ -132,9 +129,7 @@ PYBIND11_MODULE(_psr_database, m) {
         .def_property_readonly("path", &psr::Database::path)
         .def("error_message", &psr::Database::error_message)
         .def("__enter__", [](psr::Database& db) -> psr::Database& { return db; })
-        .def(
-            "__exit__",
-            [](psr::Database& db, py::object, py::object, py::object) { db.close(); });
+        .def("__exit__", [](psr::Database& db, py::object, py::object, py::object) { db.close(); });
 
     // Module level version
     m.attr("__version__") = "1.0.0";
