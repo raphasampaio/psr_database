@@ -118,6 +118,62 @@ for (final row in result.toList()) {
 }
 ```
 
+## Testing
+
+### C++ Tests
+
+```bash
+# Build with tests enabled
+cmake -B build -DPSR_BUILD_TESTS=ON
+cmake --build build
+
+# Run tests
+ctest --test-dir build --output-on-failure
+```
+
+### Python Tests
+
+```bash
+# Build Python binding first
+cmake -B build -DPSR_BUILD_PYTHON_BINDING=ON
+cmake --build build
+
+# Run tests with uv
+cd bindings/python
+uv sync
+uv run pytest tests/ -v
+```
+
+### Julia Tests
+
+```bash
+# Build C API first
+cmake -B build -DPSR_BUILD_C_API=ON
+cmake --build build
+
+# Set library path (Linux/macOS)
+export LD_LIBRARY_PATH=$PWD/build/lib:$LD_LIBRARY_PATH
+
+# Run tests
+julia --project=bindings/julia/PsrDatabase -e "using Pkg; Pkg.instantiate(); Pkg.test()"
+```
+
+### Dart Tests
+
+```bash
+# Build C API first
+cmake -B build -DPSR_BUILD_C_API=ON
+cmake --build build
+
+# Set library path (Linux/macOS)
+export LD_LIBRARY_PATH=$PWD/build/lib:$LD_LIBRARY_PATH
+
+# Run tests
+cd bindings/dart
+dart pub get
+dart test
+```
+
 ## Project Structure
 
 ```
@@ -128,9 +184,12 @@ psr_database/
 ├── src_c/                  # C API wrapper
 ├── bindings/
 │   ├── python/             # Python binding (pybind11)
-│   ├── julia/              # Julia binding (Clang.jl)
+│   │   └── tests/          # pytest tests
+│   ├── julia/              # Julia binding (ccall)
+│   │   └── test/           # Julia tests
 │   └── dart/               # Dart binding (FFI)
-├── tests/                  # Test suite
+│       └── test/           # Dart tests
+├── tests/                  # C++ test suite (GoogleTest)
 └── examples/               # Usage examples
 ```
 

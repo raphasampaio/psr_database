@@ -52,9 +52,12 @@ psr_database/
 │   └── psr_database_c.cpp
 ├── bindings/
 │   ├── python/             # pybind11 binding
+│   │   └── tests/          # pytest tests
 │   ├── julia/PsrDatabase/  # Julia package (ccall)
+│   │   └── test/           # Julia Test module
 │   └── dart/               # dart:ffi binding
-├── tests/                  # GoogleTest suite
+│       └── test/           # dart test package
+├── tests/                  # GoogleTest suite (C++)
 ├── examples/               # Usage examples per language
 └── cmake/                  # CMake modules
 ```
@@ -114,14 +117,54 @@ psr_database/
 
 ## Testing
 
-Tests use GoogleTest. Test files:
-- `tests/test_database.cpp` - Database class tests
-- `tests/test_result.cpp` - Result/Row class tests
-- `tests/test_c_api.cpp` - C API tests (requires `PSR_BUILD_C_API=ON`)
+### C++ Tests (GoogleTest)
 
-Run specific test:
+Test files in `tests/`:
+- `test_database.cpp` - Database class tests
+- `test_result.cpp` - Result/Row class tests
+- `test_c_api.cpp` - C API tests (requires `PSR_BUILD_C_API=ON`)
+
 ```bash
+# Run all C++ tests
+ctest --test-dir build -C Debug --output-on-failure
+
+# Run specific test
 ./build/bin/psr_database_tests --gtest_filter="DatabaseTest.*"
+```
+
+### Python Tests (pytest + uv)
+
+Test files in `bindings/python/tests/`:
+- `test_database.py` - Database operations, transactions, context manager
+- `test_result.py` - Result iteration, Row value access
+
+```bash
+cd bindings/python
+uv sync
+uv run pytest tests/ -v
+```
+
+### Julia Tests (Test module)
+
+Test file: `bindings/julia/PsrDatabase/test/runtests.jl`
+
+```bash
+# Set library path first (Linux)
+export LD_LIBRARY_PATH=$PWD/build/lib:$LD_LIBRARY_PATH
+
+julia --project=bindings/julia/PsrDatabase -e "using Pkg; Pkg.instantiate(); Pkg.test()"
+```
+
+### Dart Tests (dart test)
+
+Test files in `bindings/dart/test/`:
+- `database_test.dart` - Database lifecycle, queries, transactions
+- `result_test.dart` - Result access, value types, disposal
+
+```bash
+cd bindings/dart
+dart pub get
+dart test
 ```
 
 ## Adding New Features

@@ -17,9 +17,10 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
+dependencies = []
 
 [project.optional-dependencies]
-test = [
+dev = [
     "pytest>=7.0",
 ]
 
@@ -28,3 +29,8 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0",
+]
