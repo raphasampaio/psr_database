@@ -12,9 +12,12 @@ if sys.platform == "win32":
     # On Windows, add the package directory to DLL search path
     if hasattr(os, "add_dll_directory"):
         os.add_dll_directory(_pkg_dir)
-    _lib_path = os.path.join(_pkg_dir, "libpsr_database.dll")
-    if os.path.exists(_lib_path):
-        ctypes.CDLL(_lib_path)
+    # Try both naming conventions (MinGW uses lib prefix, MSVC doesn't)
+    for _dll_name in ["libpsr_database.dll", "psr_database.dll"]:
+        _lib_path = os.path.join(_pkg_dir, _dll_name)
+        if os.path.exists(_lib_path):
+            ctypes.CDLL(_lib_path)
+            break
 elif sys.platform == "darwin":
     _lib_path = os.path.join(_pkg_dir, "libpsr_database.dylib")
     if os.path.exists(_lib_path):

@@ -97,15 +97,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          # MSVC puts output in Release/ subdirectory and doesn't use 'lib' prefix
-          $dll = Get-ChildItem -Path build -Recurse -Filter "psr_database.dll" | Select-Object -First 1
-          if ($dll) {
-            Copy-Item $dll.FullName bindings/python/psr_database/libpsr_database.dll
-          } else {
-            # Fallback for MinGW builds
-            $dll = Get-ChildItem -Path build -Recurse -Filter "libpsr_database.dll" | Select-Object -First 1
-            Copy-Item $dll.FullName bindings/python/psr_database/
-          }
+          # Find the DLL (MSVC: psr_database.dll, MinGW: libpsr_database.dll)
+          $dll = Get-ChildItem -Path build -Recurse -Filter "*psr_database.dll" | Select-Object -First 1
+          Copy-Item $dll.FullName bindings/python/psr_database/
 
       - name: Copy shared library to package (Linux)
         if: runner.os == 'Linux'
