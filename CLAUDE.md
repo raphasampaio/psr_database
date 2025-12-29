@@ -4,7 +4,7 @@ This file provides guidance for Claude Code when working with this repository.
 
 ## Project Overview
 
-**psr_database** is a cross-platform C++17 SQLite wrapper library with language bindings for Python, Julia, Dart, and Lua.
+**psr_database** is a cross-platform C++17 SQLite wrapper library with language bindings for Python, Julia, and Dart.
 
 ## Build Commands
 
@@ -34,7 +34,6 @@ cmake --preset release && cmake --build build/release
 | `PSR_BUILD_EXAMPLES` | OFF | Build example programs |
 | `PSR_BUILD_C_API` | OFF | Build C API wrapper (auto-enabled for FFI bindings) |
 | `PSR_BUILD_PYTHON_BINDING` | OFF | Build Python pybind11 binding |
-| `PSR_BUILD_LUA_BINDING` | OFF | Build Lua binding (requires Lua 5.4) |
 
 ## Project Structure
 
@@ -54,7 +53,6 @@ psr_database/
 ├── bindings/
 │   ├── python/             # pybind11 binding
 │   ├── julia/PsrDatabase/  # Julia package (ccall)
-│   ├── lua/                # Lua C API binding
 │   └── dart/               # dart:ffi binding
 ├── tests/                  # GoogleTest suite
 ├── examples/               # Usage examples per language
@@ -64,21 +62,21 @@ psr_database/
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   Language Bindings                      │
-├───────────┬───────────┬───────────┬───────────┬─────────┤
-│  Python   │   Julia   │    Lua    │   Dart    │  C/C++  │
-│ (pybind11)│ (ccall)   │ (C API)   │ (dart:ffi)│ (direct)│
-├───────────┴───────────┴───────────┴───────────┴─────────┤
-│                  C API (src_c/)                          │
-│              psr_database_c.h - extern "C"               │
-├─────────────────────────────────────────────────────────┤
-│                Core C++ Library (src/)                   │
-│           psr::Database, psr::Result, psr::Row           │
-├─────────────────────────────────────────────────────────┤
-│                      SQLite                              │
-│               (via CMake FetchContent)                   │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                 Language Bindings                    │
+├───────────┬───────────┬───────────┬─────────────────┤
+│  Python   │   Julia   │   Dart    │     C/C++       │
+│ (pybind11)│  (ccall)  │ (dart:ffi)│    (direct)     │
+├───────────┴───────────┴───────────┴─────────────────┤
+│                 C API (src_c/)                       │
+│            psr_database_c.h - extern "C"             │
+├─────────────────────────────────────────────────────┤
+│              Core C++ Library (src/)                 │
+│         psr::Database, psr::Result, psr::Row         │
+├─────────────────────────────────────────────────────┤
+│                     SQLite                           │
+│             (via CMake FetchContent)                 │
+└─────────────────────────────────────────────────────┘
 ```
 
 ## Code Conventions
@@ -130,7 +128,7 @@ Run specific test:
 
 1. **Core functionality**: Add to `include/psr_database/` and `src/`
 2. **Expose via C API**: Update `src_c/psr_database_c.h` and `.cpp`
-3. **Update bindings**: Each binding wraps either C++ directly (Python) or C API (Julia, Dart, Lua)
+3. **Update bindings**: Each binding wraps either C++ directly (Python) or C API (Julia, Dart)
 4. **Add tests**: Update `tests/test_*.cpp`
 
 ## Dependencies
@@ -138,7 +136,6 @@ Run specific test:
 - **SQLite**: Fetched automatically via CMake FetchContent
 - **GoogleTest**: Fetched automatically when `PSR_BUILD_TESTS=ON`
 - **pybind11**: Fetched automatically when `PSR_BUILD_PYTHON_BINDING=ON`
-- **Lua 5.4**: Must be installed system-wide for Lua binding
 
 ## Platform Notes
 
