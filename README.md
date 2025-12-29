@@ -1,6 +1,6 @@
 # psr_database
 
-A cross-platform C++ SQLite wrapper library with bindings for Python, Julia, Dart, and Lua.
+A cross-platform C++ SQLite wrapper library with bindings for Python, Julia, and Dart.
 
 ## Features
 
@@ -11,7 +11,6 @@ A cross-platform C++ SQLite wrapper library with bindings for Python, Julia, Dar
   - **Python** - pybind11 bindings
   - **Julia** - Clang.jl-based ccall bindings
   - **Dart** - dart:ffi bindings
-  - **Lua** - Lua C API bindings
 - C API for FFI integration with other languages
 
 ## Building
@@ -57,7 +56,6 @@ cmake --build build/release
 | `PSR_BUILD_EXAMPLES` | OFF | Build examples |
 | `PSR_BUILD_C_API` | OFF | Build C API wrapper |
 | `PSR_BUILD_PYTHON_BINDING` | OFF | Build Python binding |
-| `PSR_BUILD_LUA_BINDING` | OFF | Build Lua binding |
 
 ## Usage
 
@@ -105,22 +103,6 @@ for row in result
 end
 ```
 
-### Lua
-
-```lua
-local psr = require("psr_database")
-
-local db = psr.open(":memory:")
-db:execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
-db:execute("INSERT INTO users (name) VALUES ('Alice')")
-
-local result = db:execute("SELECT * FROM users")
-for i = 1, result:row_count() do
-    local row = result:get_row(i)
-    print(row.name)
-end
-```
-
 ### Dart
 
 ```dart
@@ -147,7 +129,6 @@ psr_database/
 ├── bindings/
 │   ├── python/             # Python binding (pybind11)
 │   ├── julia/              # Julia binding (Clang.jl)
-│   ├── lua/                # Lua binding
 │   └── dart/               # Dart binding (FFI)
 ├── tests/                  # Test suite
 └── examples/               # Usage examples
