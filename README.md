@@ -1,6 +1,6 @@
 # psr_database
 
-A cross-platform C++ SQLite wrapper library with bindings for Python, Julia, and Dart.
+A cross-platform C++ SQLite wrapper library with bindings for Python and Dart.
 
 ## Features
 
@@ -9,7 +9,6 @@ A cross-platform C++ SQLite wrapper library with bindings for Python, Julia, and
 - SQLite embedded via CMake FetchContent
 - Language bindings:
   - **Python** - pybind11 bindings (uses uv for package management)
-  - **Julia** - ccall bindings via C API
   - **Dart** - dart:ffi bindings via C API
 - C API for FFI integration with other languages
 
@@ -89,21 +88,6 @@ for row in result:
     print(row[1])
 ```
 
-### Julia
-
-```julia
-using PsrDatabase
-
-db = Database(":memory:")
-execute(db, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
-execute(db, "INSERT INTO users (name) VALUES ('Alice')")
-
-result = execute(db, "SELECT * FROM users")
-for row in result
-    println(row["name"])
-end
-```
-
 ### Dart
 
 ```dart
@@ -151,20 +135,6 @@ uv sync
 uv run pytest tests/ -v
 ```
 
-### Julia Tests
-
-```bash
-# Build C API first
-cmake -B build -DPSR_BUILD_C_API=ON
-cmake --build build
-
-# Set library path (Linux/macOS)
-export LD_LIBRARY_PATH=$PWD/build/lib:$LD_LIBRARY_PATH
-
-# Run tests
-julia --project=bindings/julia/PsrDatabase -e "using Pkg; Pkg.instantiate(); Pkg.test()"
-```
-
 ### Dart Tests
 
 ```bash
@@ -192,8 +162,6 @@ psr_database/
 ├── bindings/
 │   ├── python/             # Python binding (pybind11)
 │   │   └── tests/          # pytest tests
-│   ├── julia/              # Julia binding (ccall)
-│   │   └── test/           # Julia tests
 │   └── dart/               # Dart binding (FFI)
 │       └── test/           # Dart tests
 ├── tests/                  # C++ test suite (GoogleTest)

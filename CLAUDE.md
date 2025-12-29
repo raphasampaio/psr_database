@@ -4,7 +4,7 @@ This file provides guidance for Claude Code when working with this repository.
 
 ## Project Overview
 
-**psr_database** is a cross-platform C++17 SQLite wrapper library with language bindings for Python, Julia, and Dart.
+**psr_database** is a cross-platform C++17 SQLite wrapper library with language bindings for Python and Dart.
 
 ## Build Commands
 
@@ -53,8 +53,6 @@ psr_database/
 ├── bindings/
 │   ├── python/             # pybind11 binding
 │   │   └── tests/          # pytest tests
-│   ├── julia/PsrDatabase/  # Julia package (ccall)
-│   │   └── test/           # Julia Test module
 │   └── dart/               # dart:ffi binding
 │       └── test/           # dart test package
 ├── tests/                  # GoogleTest suite (C++)
@@ -67,10 +65,10 @@ psr_database/
 ```
 ┌─────────────────────────────────────────────────────┐
 │                 Language Bindings                    │
-├───────────┬───────────┬───────────┬─────────────────┤
-│  Python   │   Julia   │   Dart    │     C/C++       │
-│ (pybind11)│  (ccall)  │ (dart:ffi)│    (direct)     │
-├───────────┴───────────┴───────────┴─────────────────┤
+├─────────────┬─────────────┬─────────────────────────┤
+│   Python    │    Dart     │         C/C++           │
+│  (pybind11) │  (dart:ffi) │        (direct)         │
+├─────────────┴─────────────┴─────────────────────────┤
 │                 C API (src_c/)                       │
 │            psr_database_c.h - extern "C"             │
 ├─────────────────────────────────────────────────────┤
@@ -153,17 +151,6 @@ uv sync
 uv run pytest tests/ -v
 ```
 
-### Julia Tests (Test module)
-
-Test file: `bindings/julia/PsrDatabase/test/runtests.jl`
-
-```bash
-# Set library path first (Linux)
-export LD_LIBRARY_PATH=$PWD/build/lib:$LD_LIBRARY_PATH
-
-julia --project=bindings/julia/PsrDatabase -e "using Pkg; Pkg.instantiate(); Pkg.test()"
-```
-
 ### Dart Tests (dart test)
 
 Test files in `bindings/dart/test/`:
@@ -180,7 +167,7 @@ dart test
 
 1. **Core functionality**: Add to `include/psr_database/` and `src/`
 2. **Expose via C API**: Update `src_c/psr_database_c.h` and `.cpp`
-3. **Update bindings**: Each binding wraps either C++ directly (Python) or C API (Julia, Dart)
+3. **Update bindings**: Each binding wraps either C++ directly (Python) or C API (Dart)
 4. **Add tests**: Update `tests/test_*.cpp`
 
 ## Dependencies

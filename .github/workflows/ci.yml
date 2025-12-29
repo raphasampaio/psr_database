@@ -113,43 +113,6 @@ jobs:
         working-directory: bindings/python
         run: uv run pytest tests/ -v
 
-  test-julia:
-    name: Julia Binding (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    needs: build
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        julia-version: ['1.10']
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Julia
-        uses: julia-actions/setup-julia@v2
-        with:
-          version: ${{ matrix.julia-version }}
-
-      - name: Configure and Build C API
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DPSR_BUILD_C_API=ON
-          cmake --build build --config Release
-
-      - name: Set library path
-        run: echo "LD_LIBRARY_PATH=$PWD/build/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-
-      - name: Run Julia tests
-        run: |
-          julia --project=bindings/julia/PsrDatabase -e '
-            using Pkg
-            Pkg.instantiate()
-            Pkg.test()
-          '
-
   test-dart:
     name: Dart Binding (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
