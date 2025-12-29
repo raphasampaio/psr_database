@@ -77,14 +77,18 @@ jobs:
         run: |
           cmake -B build `
             -DCMAKE_BUILD_TYPE=Release `
-            -DPSR_BUILD_PYTHON_BINDING=ON
+            -DPSR_BUILD_PYTHON_BINDING=ON `
+            -DPython_ROOT_DIR="${{ env.pythonLocation }}" `
+            -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe"
 
       - name: Configure CMake (Linux)
         if: runner.os == 'Linux'
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Release \
-            -DPSR_BUILD_PYTHON_BINDING=ON
+            -DPSR_BUILD_PYTHON_BINDING=ON \
+            -DPython_ROOT_DIR="${{ env.pythonLocation }}" \
+            -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}/bin/python"
 
       - name: Build
         run: cmake --build build --config Release

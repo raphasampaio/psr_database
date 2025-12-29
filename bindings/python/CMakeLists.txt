@@ -13,6 +13,11 @@ target_link_libraries(psr_database_py
 set_target_properties(psr_database_py PROPERTIES
     OUTPUT_NAME "_psr_database"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/psr_database"
+    # Prevent multi-config generators (MSVC) from adding Release/Debug subdirectories
+    LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/psr_database"
+    LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/psr_database"
+    LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_CURRENT_SOURCE_DIR}/psr_database"
+    LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_CURRENT_SOURCE_DIR}/psr_database"
 )
 
 # Install Python package files
