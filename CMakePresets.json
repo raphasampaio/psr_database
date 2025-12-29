@@ -80,8 +80,7 @@
         "CMAKE_BUILD_TYPE": "Release",
         "PSR_BUILD_TESTS": "ON",
         "PSR_BUILD_C_API": "ON",
-        "PSR_BUILD_PYTHON_BINDING": "ON",
-        "PSR_BUILD_LUA_BINDING": "ON"
+        "PSR_BUILD_PYTHON_BINDING": "ON"
       }
     }
   ],

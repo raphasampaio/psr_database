@@ -94,31 +94,6 @@ jobs:
         working-directory: bindings/python
         run: python -c "import psr_database; print(psr_database.__version__)"
 
-  build-lua:
-    name: Lua Binding (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    needs: build
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Lua
-        run: sudo apt-get update && sudo apt-get install -y lua5.4 liblua5.4-dev
-
-      - name: Configure CMake
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DPSR_BUILD_LUA_BINDING=ON
-
-      - name: Build
-        run: cmake --build build --config Release
-
   clang-format:
     name: Code Formatting
     runs-on: ubuntu-latest
