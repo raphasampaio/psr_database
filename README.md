@@ -1,15 +1,12 @@
 # psr_database
 
-A cross-platform C++ SQLite wrapper library with bindings for Python and Dart.
+A cross-platform C++17 SQLite wrapper library with a C API for FFI integration.
 
 ## Features
 
 - Modern C++17 API with RAII resource management
 - Cross-platform support (Windows, Linux, macOS)
 - SQLite embedded via CMake FetchContent
-- Language bindings:
-  - **Python** - pybind11 bindings (uses uv for package management)
-  - **Dart** - dart:ffi bindings via C API
 - C API for FFI integration with other languages
 
 ## Building
@@ -20,7 +17,6 @@ A cross-platform C++ SQLite wrapper library with bindings for Python and Dart.
 - C++17 compatible compiler:
   - GCC 8+ / Clang 7+ (Linux/macOS)
   - MSVC 2019+ or MinGW (Windows)
-- [uv](https://docs.astral.sh/uv/) (for Python binding)
 
 ### Basic Build
 
@@ -53,9 +49,7 @@ cmake --build build/release
 |--------|---------|-------------|
 | `PSR_BUILD_SHARED` | ON | Build shared library |
 | `PSR_BUILD_TESTS` | ON | Build test suite |
-| `PSR_BUILD_EXAMPLES` | OFF | Build examples |
 | `PSR_BUILD_C_API` | OFF | Build C API wrapper |
-| `PSR_BUILD_PYTHON_BINDING` | OFF | Build Python binding |
 
 ## Usage
 
@@ -74,38 +68,21 @@ for (const auto& row : result) {
 }
 ```
 
-### Python
+### C API
 
-```python
-from psr_database import Database
+```c
+#include <psr_database_c.h>
 
-db = Database(":memory:")
-db.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
-db.execute("INSERT INTO users (name) VALUES (?)", ["Alice"])
+psr_database_t* db = psr_database_open(":memory:");
+psr_database_execute(db, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
 
-result = db.execute("SELECT * FROM users")
-for row in result:
-    print(row[1])
-```
-
-### Dart
-
-```dart
-import 'package:psr_database/psr_database.dart';
-
-final db = Database.open(':memory:');
-db.execute('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)');
-db.execute("INSERT INTO users (name) VALUES ('Alice')");
-
-final result = db.execute('SELECT * FROM users');
-for (final row in result.toList()) {
-    print(row['name']);
-}
+psr_result_t* result = psr_database_execute(db, "SELECT * FROM users");
+// ... iterate over results
+psr_result_free(result);
+psr_database_close(db);
 ```
 
 ## Testing
-
-### C++ Tests
 
 ```bash
 # Build with tests enabled
@@ -116,41 +93,6 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-### Python Tests
-
-Requires [uv](https://docs.astral.sh/uv/) for package management.
-
-```bash
-# Build Python binding (use uv-managed Python)
-cmake -B build -DPSR_BUILD_PYTHON_BINDING=ON \
-  -DPYTHON_EXECUTABLE="$(uv python find)"
-cmake --build build --config Release
-
-# Copy DLL to package (Windows only)
-cp build/bin/libpsr_database.dll bindings/python/psr_database/
-
-# Run tests with uv
-cd bindings/python
-uv sync
-uv run pytest tests/ -v
-```
-
-### Dart Tests
-
-```bash
-# Build C API first
-cmake -B build -DPSR_BUILD_C_API=ON
-cmake --build build
-
-# Set library path (Linux/macOS)
-export LD_LIBRARY_PATH=$PWD/build/lib:$LD_LIBRARY_PATH
-
-# Run tests
-cd bindings/dart
-dart pub get
-dart test
-```
-
 ## Project Structure
 
 ```
@@ -159,13 +101,7 @@ psr_database/
 ├── include/psr_database/   # Public C++ headers
 ├── src/                    # Core library implementation
 ├── src_c/                  # C API wrapper
-├── bindings/
-│   ├── python/             # Python binding (pybind11)
-│   │   └── tests/          # pytest tests
-│   └── dart/               # Dart binding (FFI)
-│       └── test/           # Dart tests
-├── tests/                  # C++ test suite (GoogleTest)
-└── examples/               # Usage examples
+└── tests/                  # C++ test suite (GoogleTest)
 ```
 
 ## License

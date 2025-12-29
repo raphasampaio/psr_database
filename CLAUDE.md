@@ -4,7 +4,7 @@ This file provides guidance for Claude Code when working with this repository.
 
 ## Project Overview
 
-**psr_database** is a cross-platform C++17 SQLite wrapper library with language bindings for Python and Dart.
+**psr_database** is a cross-platform C++17 SQLite wrapper library with a C API for FFI integration.
 
 ## Build Commands
 
@@ -31,9 +31,7 @@ cmake --preset release && cmake --build build/release
 |--------|---------|-------------|
 | `PSR_BUILD_SHARED` | ON | Build shared library (.dll/.so) |
 | `PSR_BUILD_TESTS` | ON | Build GoogleTest suite |
-| `PSR_BUILD_EXAMPLES` | OFF | Build example programs |
-| `PSR_BUILD_C_API` | OFF | Build C API wrapper (auto-enabled for FFI bindings) |
-| `PSR_BUILD_PYTHON_BINDING` | OFF | Build Python pybind11 binding |
+| `PSR_BUILD_C_API` | OFF | Build C API wrapper |
 
 ## Project Structure
 
@@ -50,13 +48,7 @@ psr_database/
 ├── src_c/                  # C API wrapper (extern "C")
 │   ├── psr_database_c.h    # C API header
 │   └── psr_database_c.cpp
-├── bindings/
-│   ├── python/             # pybind11 binding
-│   │   └── tests/          # pytest tests
-│   └── dart/               # dart:ffi binding
-│       └── test/           # dart test package
 ├── tests/                  # GoogleTest suite (C++)
-├── examples/               # Usage examples per language
 └── cmake/                  # CMake modules
 ```
 
@@ -64,11 +56,6 @@ psr_database/
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                 Language Bindings                    │
-├─────────────┬─────────────┬─────────────────────────┤
-│   Python    │    Dart     │         C/C++           │
-│  (pybind11) │  (dart:ffi) │        (direct)         │
-├─────────────┴─────────────┴─────────────────────────┤
 │                 C API (src_c/)                       │
 │            psr_database_c.h - extern "C"             │
 ├─────────────────────────────────────────────────────┤
@@ -130,63 +117,20 @@ ctest --test-dir build -C Debug --output-on-failure
 ./build/bin/psr_database_tests --gtest_filter="DatabaseTest.*"
 ```
 
-### Python Tests (pytest + uv)
-
-Test files in `bindings/python/tests/`:
-- `test_database.py` - Database operations, transactions, context manager
-- `test_result.py` - Result iteration, Row value access
-
-```bash
-# Build Python binding (specify uv-managed Python on Windows)
-cmake -B build -DPSR_BUILD_PYTHON_BINDING=ON \
-  -DPYTHON_EXECUTABLE="$(uv python find)"
-cmake --build build --config Release
-
-# Copy DLL to package (Windows only)
-cp build/bin/libpsr_database.dll bindings/python/psr_database/
-
-# Run tests
-cd bindings/python
-uv sync
-uv run pytest tests/ -v
-```
-
-### Dart Tests (dart test)
-
-Test files in `bindings/dart/test/`:
-- `database_test.dart` - Database lifecycle, queries, transactions
-- `result_test.dart` - Result access, value types, disposal
-
-```bash
-cd bindings/dart
-dart pub get
-dart test
-```
-
 ## Adding New Features
 
 1. **Core functionality**: Add to `include/psr_database/` and `src/`
 2. **Expose via C API**: Update `src_c/psr_database_c.h` and `.cpp`
-3. **Update bindings**: Each binding wraps either C++ directly (Python) or C API (Dart)
-4. **Add tests**: Update `tests/test_*.cpp`
+3. **Add tests**: Update `tests/test_*.cpp`
 
 ## Dependencies
 
 - **SQLite**: Fetched automatically via CMake FetchContent
 - **GoogleTest**: Fetched automatically when `PSR_BUILD_TESTS=ON`
-- **pybind11**: Fetched automatically when `PSR_BUILD_PYTHON_BINDING=ON`
 
 ## Platform Notes
 
 - **Windows**: Builds with MSVC or MinGW. DLLs output to `build/bin/`
   - MinGW builds use static runtime linking for portable binaries
-  - Python binding requires copying `libpsr_database.dll` to package directory
 - **Linux**: Builds with GCC/Clang. Shared libs output to `build/lib/`
 - **macOS**: Similar to Linux, uses `.dylib` extension
-
-## Python Binding Notes
-
-The Python binding uses **uv** for package management:
-- `pyproject.toml` uses `dependency-groups` for dev dependencies
-- Package includes native DLLs via `tool.setuptools.package-data`
-- On Windows, `os.add_dll_directory()` is used to locate bundled DLLs

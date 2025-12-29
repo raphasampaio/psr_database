@@ -51,109 +51,6 @@ jobs:
             build/lib/*
             build/bin/*
 
-  build-python:
-    name: Python Binding (${{ matrix.os }}, Python ${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ['3.10', '3.11', '3.12']
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
-      - name: Configure CMake (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          cmake -B build `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DPSR_BUILD_PYTHON_BINDING=ON `
-            -DPython_ROOT_DIR="${{ env.pythonLocation }}" `
-            -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe"
-
-      - name: Configure CMake (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DPSR_BUILD_PYTHON_BINDING=ON \
-            -DPython_ROOT_DIR="${{ env.pythonLocation }}" \
-            -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}/bin/python"
-
-      - name: Build
-        run: cmake --build build --config Release
-
-      - name: Copy DLL to package (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # Find the DLL (MSVC: psr_database.dll, MinGW: libpsr_database.dll)
-          $dll = Get-ChildItem -Path build -Recurse -Filter "*psr_database.dll" | Select-Object -First 1
-          Copy-Item $dll.FullName bindings/python/psr_database/
-
-      - name: Copy shared library to package (Linux)
-        if: runner.os == 'Linux'
-        run: cp build/lib/libpsr_database.so bindings/python/psr_database/
-
-      - name: Install Python package
-        working-directory: bindings/python
-        run: uv sync
-
-      - name: Run Python tests
-        working-directory: bindings/python
-        run: uv run pytest tests/ -v
-
-  test-dart:
-    name: Dart Binding (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    needs: build
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Dart
-        uses: dart-lang/setup-dart@v1
-        with:
-          sdk: stable
-
-      - name: Configure and Build C API
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DPSR_BUILD_C_API=ON
-          cmake --build build --config Release
-
-      - name: Copy library to Dart package
-        run: |
-          mkdir -p bindings/dart/lib/src/native
-          cp build/lib/libpsr_database_c.so bindings/dart/lib/src/native/ || true
-
-      - name: Set library path
-        run: echo "LD_LIBRARY_PATH=$PWD/build/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-
-      - name: Get Dart dependencies
-        working-directory: bindings/dart
-        run: dart pub get
-
-      - name: Run Dart tests
-        working-directory: bindings/dart
-        run: dart test
-
   clang-format:
     name: Code Formatting
     runs-on: ubuntu-latest
@@ -166,5 +63,5 @@ jobs:
 
       - name: Check formatting
         run: |
-          find include src src_c tests bindings -name '*.cpp' -o -name '*.h' | \
+          find include src src_c tests -name '*.cpp' -o -name '*.h' | \
             xargs clang-format --dry-run --Werror

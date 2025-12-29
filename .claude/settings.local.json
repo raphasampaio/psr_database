@@ -11,10 +11,6 @@
       "Bash(echo:*)",
       "Bash(cmd /c \"cd C:\\\\Development\\\\Personal\\\\psr_database\\\\build\\\\bin && psr_database_tests.exe --gtest_list_tests\")",
       "Bash(\"C:/Development/Personal/psr_database/build/bin/psr_database_tests.exe\" --gtest_list_tests)",
-      "Bash(uv python list:*)",
-      "Bash(uv sync:*)",
-      "Bash(uv run pytest:*)",
-      "Bash(uv run python:*)",
       "Bash(objdump:*)",
       "WebFetch(domain:github.com)"
     ]
