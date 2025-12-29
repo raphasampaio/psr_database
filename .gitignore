@@ -58,3 +58,5 @@ Thumbs.db
 # Test artifacts
 Testing/
 *.db
+
+.cache/
