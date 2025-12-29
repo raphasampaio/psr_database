@@ -48,9 +48,6 @@ Manifest.toml
 .packages
 pubspec.lock
 
-# Lua
-*.luac
-
 # OS files
 .DS_Store
 Thumbs.db

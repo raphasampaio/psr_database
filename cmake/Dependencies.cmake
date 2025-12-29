@@ -27,8 +27,3 @@ if(PSR_BUILD_PYTHON_BINDING)
     )
     FetchContent_MakeAvailable(pybind11)
 endif()
-
-# Lua for Lua bindings
-if(PSR_BUILD_LUA_BINDING)
-    find_package(Lua 5.4 REQUIRED)
-endif()
