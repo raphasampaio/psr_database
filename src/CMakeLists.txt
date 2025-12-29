@@ -1,0 +1,41 @@
+# Core library sources
+set(PSR_SOURCES
+    database.cpp
+    result.cpp
+)
+
+# Build type
+if(PSR_BUILD_SHARED)
+    add_library(psr_database SHARED ${PSR_SOURCES})
+    target_compile_definitions(psr_database PRIVATE PSR_DATABASE_EXPORTS)
+else()
+    add_library(psr_database STATIC ${PSR_SOURCES})
+    target_compile_definitions(psr_database PUBLIC PSR_DATABASE_STATIC)
+endif()
+
+# Include directories
+target_include_directories(psr_database
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Link dependencies
+target_link_libraries(psr_database
+    PUBLIC
+        SQLite::SQLite3
+    PRIVATE
+        psr_compiler_options
+)
+
+# Set library properties
+set_target_properties(psr_database PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    OUTPUT_NAME psr_database
+)
+
+# Alias for use in subdirectories
+add_library(psr::database ALIAS psr_database)
