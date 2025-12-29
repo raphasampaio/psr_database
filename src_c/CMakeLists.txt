@@ -24,3 +24,14 @@ set_target_properties(psr_database_c PROPERTIES
 
 # Alias for use in subdirectories
 add_library(psr::database_c ALIAS psr_database_c)
+
+# Installation rules
+install(TARGETS psr_database_c
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/psr_database_c.h
+    DESTINATION include
+)
