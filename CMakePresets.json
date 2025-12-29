@@ -22,7 +22,6 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "PSR_BUILD_TESTS": "ON",
-        "PSR_BUILD_EXAMPLES": "ON",
         "PSR_BUILD_C_API": "ON"
       }
     },
@@ -33,8 +32,7 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "PSR_BUILD_TESTS": "OFF",
-        "PSR_BUILD_EXAMPLES": "OFF"
+        "PSR_BUILD_TESTS": "OFF"
       }
     },
     {
