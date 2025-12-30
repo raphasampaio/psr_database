@@ -12,6 +12,7 @@ A cross-platform C++17 SQLite wrapper library with migration support and a C API
 - Cross-platform support (Windows, Linux, macOS)
 - SQLite embedded via CMake FetchContent
 - C API for FFI integration with other languages
+- Lua scripting support via sol2
 - Logging via spdlog
 - TOML configuration support via toml++
 
@@ -133,6 +134,8 @@ All dependencies are fetched automatically via CMake FetchContent:
 - **SQLite** (v3.47.2) - Database engine
 - **toml++** (v3.4.0) - TOML parsing
 - **spdlog** (v1.15.0) - Logging
+- **Lua** (v5.4.8) - Scripting engine
+- **sol2** (v3.3.1) - Lua C++ bindings
 - **GoogleTest** (v1.15.2) - Testing (optional)
 
 ## Project Structure

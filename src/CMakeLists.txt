@@ -30,6 +30,8 @@ target_link_libraries(psr_database
         psr_compiler_options
         tomlplusplus::tomlplusplus
         spdlog::spdlog
+        lua_library
+        sol2
 )
 
 # Set library properties

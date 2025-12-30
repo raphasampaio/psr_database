@@ -14,7 +14,8 @@
       "Bash(objdump:*)",
       "WebFetch(domain:github.com)",
       "Bash(find:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "WebFetch(domain:gitlab.com)"
     ]
   }
 }

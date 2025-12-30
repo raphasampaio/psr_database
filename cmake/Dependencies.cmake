@@ -21,6 +21,23 @@ FetchContent_Declare(spdlog
 )
 FetchContent_MakeAvailable(spdlog)
 
+# Lua 5.4.8 via lua-cmake wrapper
+set(LUA_BUILD_INTERPRETER OFF CACHE BOOL "" FORCE)
+set(LUA_BUILD_COMPILER OFF CACHE BOOL "" FORCE)
+set(LUA_TESTS "None" CACHE STRING "" FORCE)
+FetchContent_Declare(lua
+    GIT_REPOSITORY https://gitlab.com/codelibre/lua/lua-cmake.git
+    GIT_TAG lua-cmake/v5.4.8.0
+)
+FetchContent_MakeAvailable(lua)
+
+# sol2 for Lua C++ bindings
+FetchContent_Declare(sol2
+    GIT_REPOSITORY https://github.com/ThePhD/sol2.git
+    GIT_TAG v3.3.1
+)
+FetchContent_MakeAvailable(sol2)
+
 # GoogleTest for testing
 if(PSR_BUILD_TESTS)
     FetchContent_Declare(googletest
