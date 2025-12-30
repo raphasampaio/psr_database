@@ -1,7 +1,20 @@
 #include "psr_database.h"
-#include "psr_internal.h"
+#include "psr_database/database.h"
 
 #include <new>
+#include <string>
+
+// Internal struct definitions
+struct psr_database {
+    psr::Database db;
+    std::string last_error;
+    explicit psr_database(const std::string& path) : db(path) {}
+};
+
+struct psr_result {
+    psr::Result result;
+    explicit psr_result(psr::Result r) : result(std::move(r)) {}
+};
 
 extern "C" {
 

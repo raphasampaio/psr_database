@@ -1,5 +1,14 @@
 #include "psr_result.h"
-#include "psr_internal.h"
+#include "psr_database/result.h"
+
+#include <string>
+#include <vector>
+
+// Internal struct definition
+struct psr_result {
+    psr::Result result;
+    explicit psr_result(psr::Result r) : result(std::move(r)) {}
+};
 
 extern "C" {
 
