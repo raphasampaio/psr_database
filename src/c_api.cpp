@@ -47,8 +47,7 @@ PSR_C_API psr_database_t* psr_database_open(const char* path, psr_error_t* error
     }
 }
 
-PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path,
-                                                   psr_error_t* error) {
+PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path, psr_error_t* error) {
     if (!db_path || !schema_path) {
         if (error)
             *error = PSR_ERROR_INVALID_ARGUMENT;
@@ -82,8 +81,7 @@ PSR_C_API int psr_database_is_open(psr_database_t* db) {
     return db->db.is_open() ? 1 : 0;
 }
 
-PSR_C_API psr_result_t* psr_database_execute(psr_database_t* db, const char* sql,
-                                             psr_error_t* error) {
+PSR_C_API psr_result_t* psr_database_execute(psr_database_t* db, const char* sql, psr_error_t* error) {
     if (!db) {
         if (error)
             *error = PSR_ERROR_INVALID_ARGUMENT;
@@ -286,8 +284,7 @@ PSR_C_API int psr_result_is_null(psr_result_t* result, size_t row, size_t col) {
     return result->result[row].is_null(col) ? 1 : 0;
 }
 
-PSR_C_API psr_error_t psr_result_get_int(psr_result_t* result, size_t row, size_t col,
-                                         int64_t* value) {
+PSR_C_API psr_error_t psr_result_get_int(psr_result_t* result, size_t row, size_t col, int64_t* value) {
     if (!result || !value)
         return PSR_ERROR_INVALID_ARGUMENT;
     if (row >= result->result.row_count() || col >= result->result.column_count()) {
@@ -301,8 +298,7 @@ PSR_C_API psr_error_t psr_result_get_int(psr_result_t* result, size_t row, size_
     return PSR_OK;
 }
 
-PSR_C_API psr_error_t psr_result_get_double(psr_result_t* result, size_t row, size_t col,
-                                            double* value) {
+PSR_C_API psr_error_t psr_result_get_double(psr_result_t* result, size_t row, size_t col, double* value) {
     if (!result || !value)
         return PSR_ERROR_INVALID_ARGUMENT;
     if (row >= result->result.row_count() || col >= result->result.column_count()) {
@@ -328,8 +324,7 @@ PSR_C_API const char* psr_result_get_string(psr_result_t* result, size_t row, si
     return nullptr;
 }
 
-PSR_C_API const uint8_t* psr_result_get_blob(psr_result_t* result, size_t row, size_t col,
-                                             size_t* size) {
+PSR_C_API const uint8_t* psr_result_get_blob(psr_result_t* result, size_t row, size_t col, size_t* size) {
     if (!result || row >= result->result.row_count() || col >= result->result.column_count()) {
         if (size)
             *size = 0;

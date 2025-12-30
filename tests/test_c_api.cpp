@@ -9,9 +9,7 @@ namespace fs = std::filesystem;
 
 class CApiTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        test_db_path_ = (fs::temp_directory_path() / "psr_c_test.db").string();
-    }
+    void SetUp() override { test_db_path_ = (fs::temp_directory_path() / "psr_c_test.db").string(); }
 
     void TearDown() override {
         if (fs::exists(test_db_path_)) {
@@ -56,8 +54,7 @@ TEST_F(CApiTest, ExecuteQuery) {
     psr_database_t* db = psr_database_open(":memory:", &error);
     ASSERT_NE(db, nullptr);
 
-    psr_result_t* result =
-        psr_database_execute(db, "CREATE TABLE test (id INTEGER PRIMARY KEY)", &error);
+    psr_result_t* result = psr_database_execute(db, "CREATE TABLE test (id INTEGER PRIMARY KEY)", &error);
     EXPECT_EQ(error, PSR_OK);
     EXPECT_NE(result, nullptr);
 
@@ -70,12 +67,11 @@ TEST_F(CApiTest, InsertAndSelect) {
     psr_database_t* db = psr_database_open(":memory:", &error);
     ASSERT_NE(db, nullptr);
 
-    psr_result_t* r1 = psr_database_execute(
-        db, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)", &error);
+    psr_result_t* r1 =
+        psr_database_execute(db, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)", &error);
     psr_result_free(r1);
 
-    psr_result_t* r2 =
-        psr_database_execute(db, "INSERT INTO users (name, age) VALUES ('Alice', 30)", &error);
+    psr_result_t* r2 = psr_database_execute(db, "INSERT INTO users (name, age) VALUES ('Alice', 30)", &error);
     psr_result_free(r2);
 
     EXPECT_EQ(psr_database_last_insert_rowid(db), 1);
@@ -111,12 +107,10 @@ TEST_F(CApiTest, ValueTypes) {
     psr_database_t* db = psr_database_open(":memory:", &error);
     ASSERT_NE(db, nullptr);
 
-    psr_result_t* r1 = psr_database_execute(
-        db, "CREATE TABLE types (i INTEGER, f REAL, t TEXT, n INTEGER)", &error);
+    psr_result_t* r1 = psr_database_execute(db, "CREATE TABLE types (i INTEGER, f REAL, t TEXT, n INTEGER)", &error);
     psr_result_free(r1);
 
-    psr_result_t* r2 =
-        psr_database_execute(db, "INSERT INTO types VALUES (42, 3.14, 'hello', NULL)", &error);
+    psr_result_t* r2 = psr_database_execute(db, "INSERT INTO types VALUES (42, 3.14, 'hello', NULL)", &error);
     psr_result_free(r2);
 
     psr_result_t* result = psr_database_execute(db, "SELECT * FROM types", &error);
@@ -267,16 +261,15 @@ TEST_F(CApiMigrationTest, FromSchemaBasic) {
     create_migration(2, "CREATE TABLE posts (id INTEGER PRIMARY KEY, title TEXT);");
 
     psr_error_t error;
-    psr_database_t* db =
-        psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
+    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
 
     ASSERT_NE(db, nullptr);
     EXPECT_EQ(error, PSR_OK);
     EXPECT_EQ(psr_database_current_version(db), 2);
 
     // Verify tables exist
-    psr_result_t* result = psr_database_execute(
-        db, "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", &error);
+    psr_result_t* result =
+        psr_database_execute(db, "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", &error);
     ASSERT_NE(result, nullptr);
     EXPECT_EQ(psr_result_row_count(result), 2u);
 
@@ -286,8 +279,7 @@ TEST_F(CApiMigrationTest, FromSchemaBasic) {
 
 TEST_F(CApiMigrationTest, FromSchemaEmpty) {
     psr_error_t error;
-    psr_database_t* db =
-        psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
+    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
 
     ASSERT_NE(db, nullptr);
     EXPECT_EQ(error, PSR_OK);
@@ -299,8 +291,7 @@ TEST_F(CApiMigrationTest, FromSchemaEmpty) {
 TEST_F(CApiMigrationTest, FromSchemaNullArgs) {
     psr_error_t error;
 
-    psr_database_t* db1 =
-        psr_database_from_schema(nullptr, test_schema_path_.string().c_str(), &error);
+    psr_database_t* db1 = psr_database_from_schema(nullptr, test_schema_path_.string().c_str(), &error);
     EXPECT_EQ(db1, nullptr);
     EXPECT_EQ(error, PSR_ERROR_INVALID_ARGUMENT);
 
@@ -331,8 +322,7 @@ TEST_F(CApiMigrationTest, MigrationErrorString) {
 
 TEST_F(CApiMigrationTest, FromSchemaInvalidPath) {
     psr_error_t error;
-    psr_database_t* db =
-        psr_database_from_schema(test_db_path_.c_str(), "/nonexistent/path", &error);
+    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), "/nonexistent/path", &error);
 
     EXPECT_EQ(db, nullptr);
     EXPECT_EQ(error, PSR_ERROR_MIGRATION);

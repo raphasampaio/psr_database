@@ -76,8 +76,7 @@ TEST_F(DatabaseTest, ParameterizedQuery) {
 
     db.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT, price REAL)");
 
-    db.execute("INSERT INTO items (name, price) VALUES (?, ?)",
-               {psr::Value{"Widget"}, psr::Value{19.99}});
+    db.execute("INSERT INTO items (name, price) VALUES (?, ?)", {psr::Value{"Widget"}, psr::Value{19.99}});
 
     auto result = db.execute("SELECT * FROM items WHERE name = ?", {psr::Value{"Widget"}});
 
@@ -222,8 +221,7 @@ protected:
 
 TEST_F(MigrationTest, FromSchemaBasic) {
     create_migration(1, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);");
-    create_migration(2,
-                     "CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT);");
+    create_migration(2, "CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT);");
 
     auto db = psr::Database::from_schema(test_db_path_, test_schema_path_.string());
 
@@ -249,8 +247,7 @@ TEST_F(MigrationTest, FromSchemaInvalidSql) {
     create_migration(1, "CREATE TABLE valid_table (id INTEGER);");
     create_migration(2, "THIS IS INVALID SQL;");
 
-    EXPECT_THROW(psr::Database::from_schema(test_db_path_, test_schema_path_.string()),
-                 std::runtime_error);
+    EXPECT_THROW(psr::Database::from_schema(test_db_path_, test_schema_path_.string()), std::runtime_error);
 
     // Open the database to check the state after failed migration
     psr::Database db(test_db_path_);
@@ -259,8 +256,7 @@ TEST_F(MigrationTest, FromSchemaInvalidSql) {
     EXPECT_EQ(db.current_version(), 1);
 
     // valid_table should exist
-    auto result =
-        db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='valid_table'");
+    auto result = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='valid_table'");
     EXPECT_EQ(result.row_count(), 1u);
 }
 
@@ -324,8 +320,7 @@ TEST_F(MigrationTest, MigrateUpIncremental) {
 }
 
 TEST_F(MigrationTest, SchemaPathMissing) {
-    EXPECT_THROW(psr::Database::from_schema(test_db_path_, "/nonexistent/path"),
-                 std::runtime_error);
+    EXPECT_THROW(psr::Database::from_schema(test_db_path_, "/nonexistent/path"), std::runtime_error);
 }
 
 TEST_F(MigrationTest, IgnoresNonNumericFolders) {
@@ -344,6 +339,5 @@ TEST_F(MigrationTest, MissingUpSqlThrows) {
     // Create a migration folder without up.sql
     fs::create_directories(test_schema_path_ / "1");
 
-    EXPECT_THROW(psr::Database::from_schema(test_db_path_, test_schema_path_.string()),
-                 std::runtime_error);
+    EXPECT_THROW(psr::Database::from_schema(test_db_path_, test_schema_path_.string()), std::runtime_error);
 }

@@ -1,16 +1,19 @@
 # psr_database
 
+[![CI](https://github.com/raphasampaio/psr_database/actions/workflows/ci.yml/badge.svg)](https://github.com/raphasampaio/psr_database/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/raphasampaio/psr_database/graph/badge.svg?token=TwhY6YNDNN)](https://codecov.io/gh/raphasampaio/psr_database)
 
-A cross-platform C++17 SQLite wrapper library with a C API for FFI integration.
+A cross-platform C++17 SQLite wrapper library with migration support and a C API for FFI integration.
 
 ## Features
 
 - Modern C++17 API with RAII resource management
+- Schema migrations with version tracking
 - Cross-platform support (Windows, Linux, macOS)
 - SQLite embedded via CMake FetchContent
 - C API for FFI integration with other languages
-- CMake package config for easy integration
+- Logging via spdlog
+- TOML configuration support via toml++
 
 ## Building
 
@@ -41,20 +44,23 @@ cmake --install build --prefix /usr/local
 | `PSR_BUILD_TESTS` | ON | Build test suite |
 | `PSR_BUILD_C_API` | OFF | Build C API wrapper |
 
-## Usage
+### Code Formatting
 
-### Using with CMake
-
-```cmake
-find_package(psr_database REQUIRED)
-target_link_libraries(myapp PRIVATE psr::database)
+```bash
+find include src tests -name '*.cpp' -o -name '*.h' | xargs clang-format -i
 ```
+
+## Usage
 
 ### C++ API
 
 ```cpp
 #include <psr/database.h>
 
+// Open database with migrations
+auto db = psr::Database::from_schema("app.db", "schema/");
+
+// Or open directly
 psr::Database db(":memory:");
 db.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
 db.execute("INSERT INTO users (name) VALUES (?)", {psr::Value{"Alice"}});
@@ -65,20 +71,69 @@ for (const auto& row : result) {
 }
 ```
 
+### Migrations
+
+Create numbered folders with `up.sql` files:
+
+```
+schema/
+├── 1/
+│   └── up.sql    # CREATE TABLE users (...)
+├── 2/
+│   └── up.sql    # CREATE TABLE posts (...)
+└── 3/
+    └── up.sql    # ALTER TABLE users ADD COLUMN email TEXT
+```
+
+```cpp
+// Opens database and applies all pending migrations
+auto db = psr::Database::from_schema("app.db", "schema/");
+
+// Check current version
+int64_t version = db.current_version();
+
+// Manually apply migrations
+db.migrate_up();
+```
+
 ### C API
 
 ```c
 #include <psr/c/database.h>
 #include <psr/c/result.h>
 
-psr_database_t* db = psr_database_open(":memory:", NULL);
-psr_database_execute(db, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)", NULL);
+psr_error_t error;
 
-psr_result_t* result = psr_database_execute(db, "SELECT * FROM users", NULL);
+// Open with migrations
+psr_database_t* db = psr_database_from_schema("app.db", "schema/", &error);
+
+// Or open directly
+psr_database_t* db = psr_database_open(":memory:", &error);
+
+// Get current version
+int64_t version = psr_database_current_version(db);
+
+psr_result_t* result = psr_database_execute(db, "SELECT * FROM users", &error);
 // ... iterate over results
 psr_result_free(result);
 psr_database_close(db);
 ```
+
+### Using with CMake
+
+```cmake
+find_package(psr_database REQUIRED)
+target_link_libraries(myapp PRIVATE psr::database)
+```
+
+## Dependencies
+
+All dependencies are fetched automatically via CMake FetchContent:
+
+- **SQLite** (v3.47.2) - Database engine
+- **toml++** (v3.4.0) - TOML parsing
+- **spdlog** (v1.15.0) - Logging
+- **GoogleTest** (v1.15.2) - Testing (optional)
 
 ## Project Structure
 

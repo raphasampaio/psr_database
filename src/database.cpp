@@ -67,8 +67,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        throw std::runtime_error("Failed to prepare statement: " +
-                                 std::string(sqlite3_errmsg(impl_->db)));
+        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
     }
 
     // Bind parameters
@@ -86,11 +85,9 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                 } else if constexpr (std::is_same_v<T, double>) {
                     sqlite3_bind_double(stmt, idx, arg);
                 } else if constexpr (std::is_same_v<T, std::string>) {
-                    sqlite3_bind_text(stmt, idx, arg.c_str(), static_cast<int>(arg.size()),
-                                      SQLITE_TRANSIENT);
+                    sqlite3_bind_text(stmt, idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
                 } else if constexpr (std::is_same_v<T, std::vector<uint8_t>>) {
-                    sqlite3_bind_blob(stmt, idx, arg.data(), static_cast<int>(arg.size()),
-                                      SQLITE_TRANSIENT);
+                    sqlite3_bind_blob(stmt, idx, arg.data(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
                 }
             },
             param);
@@ -126,8 +123,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                 break;
             }
             case SQLITE_BLOB: {
-                const uint8_t* data =
-                    reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, i));
+                const uint8_t* data = reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, i));
                 int size = sqlite3_column_bytes(stmt, i);
                 values.emplace_back(std::vector<uint8_t>(data, data + size));
                 break;
@@ -144,8 +140,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     sqlite3_finalize(stmt);
 
     if (rc != SQLITE_DONE) {
-        throw std::runtime_error("Failed to execute statement: " +
-                                 std::string(sqlite3_errmsg(impl_->db)));
+        throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(impl_->db)));
     }
 
     return Result(std::move(columns), std::move(rows));
@@ -303,8 +298,7 @@ void Database::migrate_up() {
         } catch (const std::exception& e) {
             rollback();
             spdlog::error("Migration {} failed: {}", version, e.what());
-            throw std::runtime_error("Migration " + std::to_string(version) +
-                                     " failed: " + e.what());
+            throw std::runtime_error("Migration " + std::to_string(version) + " failed: " + e.what());
         }
     }
 }
