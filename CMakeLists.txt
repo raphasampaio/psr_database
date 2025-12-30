@@ -27,13 +27,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Core library
+# Core library (and C API if enabled)
 add_subdirectory(src)
-
-# C API wrapper
-if(PSR_BUILD_C_API)
-    add_subdirectory(c)
-endif()
 
 # Tests
 if(PSR_BUILD_TESTS)
@@ -75,7 +70,6 @@ if(CLANG_FORMAT)
     file(GLOB_RECURSE ALL_SOURCE_FILES
         ${CMAKE_SOURCE_DIR}/include/*.h
         ${CMAKE_SOURCE_DIR}/src/*.cpp
-        ${CMAKE_SOURCE_DIR}/c/*.cpp
         ${CMAKE_SOURCE_DIR}/tests/*.cpp
     )
     add_custom_target(format

@@ -39,18 +39,20 @@ psr_database/
 │   └── c/              # C API headers
 │       ├── database.h
 │       └── result.h
-├── src/                # C++ implementation
-├── c/                  # C API implementation
-├── tests/              # GoogleTest suite
-└── cmake/              # CMake modules
+├── src/                # Implementation
+│   ├── database.cpp
+│   ├── result.cpp
+│   └── c_api.cpp       # C API wrapper
+├── tests/
+└── cmake/
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│              C API (c/)                 │
-│   include/psr/c/*.h - extern "C"        │
+│          C API (src/c_api.cpp)          │
+│        include/psr/c/ - extern "C"      │
 ├─────────────────────────────────────────┤
 │        Core C++ Library (src/)          │
 │   psr::Database, psr::Result, psr::Row  │
@@ -84,7 +86,7 @@ psr_database/
 ## Adding Features
 
 1. Add to `include/psr/` and `src/`
-2. Expose via C API in `include/psr/c/` and `c/`
+2. Expose via C API in `include/psr/c/` and `src/c_api.cpp`
 3. Add tests in `tests/`
 
 ## Platform Notes

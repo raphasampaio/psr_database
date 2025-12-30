@@ -89,10 +89,12 @@ psr_database/
 │   └── c/              # C API headers
 │       ├── database.h
 │       └── result.h
-├── src/                # C++ implementation
-├── c/                  # C API implementation
-├── tests/              # GoogleTest suite
-└── cmake/              # CMake modules
+├── src/                # Implementation
+│   ├── database.cpp
+│   ├── result.cpp
+│   └── c_api.cpp       # C API wrapper
+├── tests/
+└── cmake/
 ```
 
 ## License

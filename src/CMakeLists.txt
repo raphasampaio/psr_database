@@ -51,3 +51,37 @@ install(TARGETS psr_database
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/psr
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
+
+# C API wrapper (optional)
+if(PSR_BUILD_C_API)
+    add_library(psr_database_c SHARED c_api.cpp)
+
+    target_compile_definitions(psr_database_c PRIVATE
+        PSR_DATABASE_C_EXPORTS
+        PSR_VERSION="${PROJECT_VERSION}"
+    )
+
+    target_include_directories(psr_database_c PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
+
+    target_link_libraries(psr_database_c PRIVATE
+        psr_database
+        psr_compiler_options
+    )
+
+    set_target_properties(psr_database_c PROPERTIES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
+    )
+
+    add_library(psr::database_c ALIAS psr_database_c)
+
+    install(TARGETS psr_database_c
+        EXPORT psr_databaseTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+endif()
