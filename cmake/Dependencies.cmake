@@ -7,6 +7,13 @@ FetchContent_Declare(sqlite3
 )
 FetchContent_MakeAvailable(sqlite3)
 
+# toml++ for TOML parsing
+FetchContent_Declare(tomlplusplus
+    GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
+    GIT_TAG v3.4.0
+)
+FetchContent_MakeAvailable(tomlplusplus)
+
 # GoogleTest for testing
 if(PSR_BUILD_TESTS)
     FetchContent_Declare(googletest

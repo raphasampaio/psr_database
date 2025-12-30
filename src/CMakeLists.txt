@@ -28,6 +28,7 @@ target_link_libraries(psr_database
         SQLite::SQLite3
     PRIVATE
         psr_compiler_options
+        tomlplusplus::tomlplusplus
 )
 
 # Set library properties
