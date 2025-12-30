@@ -293,7 +293,7 @@ PSR_C_API const char* psr_error_string(psr_error_t error) {
 }
 
 PSR_C_API const char* psr_version(void) {
-    return "1.0.0";
+    return PSR_VERSION;
 }
 
 }  // extern "C"

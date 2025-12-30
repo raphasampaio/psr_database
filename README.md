@@ -8,39 +8,27 @@ A cross-platform C++17 SQLite wrapper library with a C API for FFI integration.
 - Cross-platform support (Windows, Linux, macOS)
 - SQLite embedded via CMake FetchContent
 - C API for FFI integration with other languages
+- CMake package config for easy integration
 
 ## Building
 
 ### Prerequisites
 
-- CMake 3.21 or higher
-- C++17 compatible compiler:
-  - GCC 8+ / Clang 7+ (Linux/macOS)
-  - MSVC 2019+ or MinGW (Windows)
+- CMake 3.21+
+- C++17 compiler (GCC 8+, Clang 7+, MSVC 2019+, MinGW)
 
-### Basic Build
+### Quick Start
 
 ```bash
-# Configure
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-
-# Build
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DPSR_BUILD_C_API=ON
 cmake --build build --config Release
-
-# Run tests
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-### Using CMake Presets
+### Install
 
 ```bash
-# Development build with tests
-cmake --preset dev
-cmake --build build/dev
-
-# Release build
-cmake --preset release
-cmake --build build/release
+cmake --install build --prefix /usr/local
 ```
 
 ### Build Options
@@ -53,7 +41,14 @@ cmake --build build/release
 
 ## Usage
 
-### C++
+### Using with CMake
+
+```cmake
+find_package(psr_database REQUIRED)
+target_link_libraries(myapp PRIVATE psr::database)
+```
+
+### C++ API
 
 ```cpp
 #include <psr_database/psr_database.h>
@@ -73,24 +68,13 @@ for (const auto& row : result) {
 ```c
 #include <psr_database_c.h>
 
-psr_database_t* db = psr_database_open(":memory:");
-psr_database_execute(db, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
+psr_database_t* db = psr_database_open(":memory:", NULL);
+psr_database_execute(db, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)", NULL);
 
-psr_result_t* result = psr_database_execute(db, "SELECT * FROM users");
+psr_result_t* result = psr_database_execute(db, "SELECT * FROM users", NULL);
 // ... iterate over results
 psr_result_free(result);
 psr_database_close(db);
-```
-
-## Testing
-
-```bash
-# Build with tests enabled
-cmake -B build -DPSR_BUILD_TESTS=ON
-cmake --build build
-
-# Run tests
-ctest --test-dir build --output-on-failure
 ```
 
 ## Project Structure
@@ -101,7 +85,7 @@ psr_database/
 ├── include/psr_database/   # Public C++ headers
 ├── src/                    # Core library implementation
 ├── src_c/                  # C API wrapper
-└── tests/                  # C++ test suite (GoogleTest)
+└── tests/                  # GoogleTest suite
 ```
 
 ## License

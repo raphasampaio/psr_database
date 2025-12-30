@@ -39,3 +39,15 @@ set_target_properties(psr_database PROPERTIES
 
 # Alias for use in subdirectories
 add_library(psr::database ALIAS psr_database)
+
+# Installation rules
+include(GNUInstallDirs)
+install(TARGETS psr_database
+    EXPORT psr_databaseTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/psr_database
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)

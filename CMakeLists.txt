@@ -41,6 +41,34 @@ if(PSR_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
+# Package config for find_package() support
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/psr_databaseConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/psr_databaseConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/psr_databaseConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/psr_database
+)
+
+install(EXPORT psr_databaseTargets
+    FILE psr_databaseTargets.cmake
+    NAMESPACE psr::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/psr_database
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/psr_databaseConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/psr_databaseConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/psr_database
+)
+
 # Format target
 find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT)

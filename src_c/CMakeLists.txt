@@ -2,7 +2,11 @@ add_library(psr_database_c SHARED
     psr_database_c.cpp
 )
 
-target_compile_definitions(psr_database_c PRIVATE PSR_DATABASE_C_EXPORTS)
+target_compile_definitions(psr_database_c
+    PRIVATE
+        PSR_DATABASE_C_EXPORTS
+        PSR_VERSION="${PROJECT_VERSION}"
+)
 
 target_include_directories(psr_database_c
     PUBLIC
@@ -26,12 +30,13 @@ set_target_properties(psr_database_c PROPERTIES
 add_library(psr::database_c ALIAS psr_database_c)
 
 # Installation rules
+include(GNUInstallDirs)
 install(TARGETS psr_database_c
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
+    EXPORT psr_databaseTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/psr_database_c.h
-    DESTINATION include
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )

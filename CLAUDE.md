@@ -6,23 +6,18 @@ This file provides guidance for Claude Code when working with this repository.
 
 **psr_database** is a cross-platform C++17 SQLite wrapper library with a C API for FFI integration.
 
-## Build Commands
+## Quick Reference
 
 ```bash
-# Configure and build (development)
-cmake -B build -DCMAKE_BUILD_TYPE=Debug -DPSR_BUILD_TESTS=ON -DPSR_BUILD_C_API=ON
-cmake --build build
-
-# Configure and build (release)
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+# Build (release with C API)
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DPSR_BUILD_C_API=ON
 cmake --build build --config Release
 
-# Run tests
-ctest --test-dir build -C Debug --output-on-failure
+# Test
+ctest --test-dir build -C Release --output-on-failure
 
-# Using presets
-cmake --preset dev && cmake --build build/dev
-cmake --preset release && cmake --build build/release
+# Install
+cmake --install build --prefix /usr/local
 ```
 
 ## Build Options
@@ -38,33 +33,25 @@ cmake --preset release && cmake --build build/release
 ```
 psr_database/
 ├── include/psr_database/   # Public C++ headers
-│   ├── database.h          # Database class
-│   ├── result.h            # Result/Row classes
-│   ├── export.h            # DLL export macros
-│   └── psr_database.h      # Main include header
-├── src/                    # Core library implementation
-│   ├── database.cpp
-│   └── result.cpp
+├── src/                    # Core C++ library
 ├── src_c/                  # C API wrapper (extern "C")
-│   ├── psr_database_c.h    # C API header
-│   └── psr_database_c.cpp
-├── tests/                  # GoogleTest suite (C++)
+├── tests/                  # GoogleTest suite
 └── cmake/                  # CMake modules
 ```
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                 C API (src_c/)                       │
-│            psr_database_c.h - extern "C"             │
-├─────────────────────────────────────────────────────┤
-│              Core C++ Library (src/)                 │
-│         psr::Database, psr::Result, psr::Row         │
-├─────────────────────────────────────────────────────┤
-│                     SQLite                           │
-│             (via CMake FetchContent)                 │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│           C API (src_c/)                │
+│      psr_database_c.h - extern "C"      │
+├─────────────────────────────────────────┤
+│        Core C++ Library (src/)          │
+│   psr::Database, psr::Result, psr::Row  │
+├─────────────────────────────────────────┤
+│               SQLite                    │
+│       (via CMake FetchContent)          │
+└─────────────────────────────────────────┘
 ```
 
 ## Code Conventions
@@ -72,65 +59,29 @@ psr_database/
 - **C++ Standard**: C++17
 - **Namespace**: `psr`
 - **Naming**: snake_case for functions/variables, PascalCase for classes
-- **Headers**: Use `#pragma once` or include guards
-- **Formatting**: Follow `.clang-format` (LLVM-based, 4-space indent)
 
 ## Key Classes
 
-### C++ API (`include/psr_database/`)
+### C++ API
 
-- `psr::Database` - SQLite database connection wrapper
-  - `execute(sql)` / `execute(sql, params)` - Execute queries
-  - `begin_transaction()`, `commit()`, `rollback()` - Transaction control
-  - `last_insert_rowid()`, `changes()` - Query metadata
-
+- `psr::Database` - Connection wrapper (execute, transactions)
 - `psr::Result` - Query result container (iterable)
-  - `row_count()`, `column_count()`, `columns()`
-  - `operator[]` for row access
+- `psr::Row` - Single row (get_int, get_string, get_blob, etc.)
+- `psr::Value` - Variant: `nullptr_t | int64_t | double | string | vector<uint8_t>`
 
-- `psr::Row` - Single result row
-  - `get_int()`, `get_double()`, `get_string()`, `get_blob()`
-  - `is_null()` - Check for NULL values
+### C API
 
-- `psr::Value` - Variant type: `nullptr_t | int64_t | double | string | vector<uint8_t>`
-
-### C API (`src_c/psr_database_c.h`)
-
-- Opaque handles: `psr_database_t*`, `psr_result_t*`
+- Handles: `psr_database_t*`, `psr_result_t*`
 - Error codes: `PSR_OK`, `PSR_ERROR_*`
-- Functions prefixed with `psr_database_*` and `psr_result_*`
+- Functions: `psr_database_*`, `psr_result_*`
 
-## Testing
+## Adding Features
 
-### C++ Tests (GoogleTest)
-
-Test files in `tests/`:
-- `test_database.cpp` - Database class tests
-- `test_result.cpp` - Result/Row class tests
-- `test_c_api.cpp` - C API tests (requires `PSR_BUILD_C_API=ON`)
-
-```bash
-# Run all C++ tests
-ctest --test-dir build -C Debug --output-on-failure
-
-# Run specific test
-./build/bin/psr_database_tests --gtest_filter="DatabaseTest.*"
-```
-
-## Adding New Features
-
-1. **Core functionality**: Add to `include/psr_database/` and `src/`
-2. **Expose via C API**: Update `src_c/psr_database_c.h` and `.cpp`
-3. **Add tests**: Update `tests/test_*.cpp`
-
-## Dependencies
-
-- **SQLite**: Fetched automatically via CMake FetchContent
-- **GoogleTest**: Fetched automatically when `PSR_BUILD_TESTS=ON`
+1. Add to `include/psr_database/` and `src/`
+2. Expose via C API in `src_c/`
+3. Add tests in `tests/`
 
 ## Platform Notes
 
-- **Windows**: Builds with MSVC or MinGW. DLLs output to `build/bin/`
-  - MinGW builds use static runtime linking for portable binaries
-- **Linux**: Builds with GCC/Clang. Shared libs output to `build/lib/`
-- **macOS**: Similar to Linux, uses `.dylib` extension
+- **Windows**: DLLs in `build/bin/`
+- **Linux/macOS**: Shared libs in `build/lib/`

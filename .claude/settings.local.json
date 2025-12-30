@@ -12,7 +12,8 @@
       "Bash(cmd /c \"cd C:\\\\Development\\\\Personal\\\\psr_database\\\\build\\\\bin && psr_database_tests.exe --gtest_list_tests\")",
       "Bash(\"C:/Development/Personal/psr_database/build/bin/psr_database_tests.exe\" --gtest_list_tests)",
       "Bash(objdump:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(find:*)"
     ]
   }
 }
