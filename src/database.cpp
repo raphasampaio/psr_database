@@ -1,6 +1,7 @@
 #include "psr/database.h"
 
 #include <sqlite3.h>
+#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <filesystem>
