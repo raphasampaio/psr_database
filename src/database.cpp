@@ -1,6 +1,11 @@
 #include "psr/database.h"
 
 #include <sqlite3.h>
+
+#include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <stdexcept>
 
 namespace psr {
@@ -8,6 +13,7 @@ namespace psr {
 struct Database::Impl {
     sqlite3* db = nullptr;
     std::string path;
+    std::string schema_path;
     std::string last_error;
 
     ~Impl() {
@@ -180,6 +186,117 @@ std::string Database::error_message() const {
         return "Database not open";
     }
     return sqlite3_errmsg(impl_->db);
+}
+
+Database Database::from_schema(const std::string& database_path, const std::string& schema_path) {
+    if (!std::filesystem::exists(schema_path)) {
+        throw std::runtime_error("Schema path does not exist: " + schema_path);
+    }
+    if (!std::filesystem::is_directory(schema_path)) {
+        throw std::runtime_error("Schema path is not a directory: " + schema_path);
+    }
+
+    Database db(database_path);
+    db.impl_->schema_path = schema_path;
+    db.migrate_up();
+    return db;
+}
+
+int64_t Database::current_version() {
+    if (!is_open()) {
+        throw std::runtime_error("Database is not open");
+    }
+
+    auto result = execute("PRAGMA user_version");
+    if (result.empty()) {
+        return 0;
+    }
+
+    auto version = result[0].get_int(0);
+    return version.value_or(0);
+}
+
+void Database::set_version(int64_t version) {
+    if (!is_open()) {
+        throw std::runtime_error("Database is not open");
+    }
+
+    execute("PRAGMA user_version = " + std::to_string(version));
+}
+
+void Database::migrate_up() {
+    if (!is_open()) {
+        throw std::runtime_error("Database is not open");
+    }
+
+    if (impl_->schema_path.empty()) {
+        return;  // No schema path set, nothing to migrate
+    }
+
+    namespace fs = std::filesystem;
+
+    // Collect all numbered migration directories
+    std::vector<int64_t> versions;
+    for (const auto& entry : fs::directory_iterator(impl_->schema_path)) {
+        if (!entry.is_directory()) {
+            continue;
+        }
+
+        const auto& dirname = entry.path().filename().string();
+        try {
+            size_t pos = 0;
+            int64_t version = std::stoll(dirname, &pos);
+            if (pos == dirname.size() && version > 0) {
+                versions.push_back(version);
+            }
+        } catch (const std::exception&) {
+            // Not a numeric directory name, skip
+        }
+    }
+
+    // Sort versions ascending
+    std::sort(versions.begin(), versions.end());
+
+    int64_t current = current_version();
+
+    // Apply each pending migration
+    for (int64_t version : versions) {
+        if (version <= current) {
+            continue;
+        }
+
+        fs::path migration_dir = fs::path(impl_->schema_path) / std::to_string(version);
+        fs::path up_sql_path = migration_dir / "up.sql";
+
+        if (!fs::exists(up_sql_path)) {
+            throw std::runtime_error("Migration file not found: " + up_sql_path.string());
+        }
+
+        // Read the SQL file
+        std::ifstream file(up_sql_path);
+        if (!file) {
+            throw std::runtime_error("Failed to open migration file: " + up_sql_path.string());
+        }
+
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string sql = buffer.str();
+
+        // Apply migration in a transaction
+        begin_transaction();
+        try {
+            execute(sql);
+            set_version(version);
+            commit();
+        } catch (const std::exception& e) {
+            rollback();
+            throw std::runtime_error("Migration " + std::to_string(version) + " failed: " + e.what());
+        }
+    }
+}
+
+const std::string& Database::schema_path() const {
+    return impl_->schema_path;
 }
 
 }  // namespace psr

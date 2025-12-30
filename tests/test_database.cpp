@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <gtest/gtest.h>
 #include <psr/database.h>
 #include <string>
@@ -179,4 +180,174 @@ TEST_F(DatabaseTest, ResultIteration) {
         ++expected;
     }
     EXPECT_EQ(expected, 6);
+}
+
+// Migration tests
+class MigrationTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        test_db_path_ = (fs::temp_directory_path() / "psr_migration_test.db").string();
+        test_schema_path_ = fs::temp_directory_path() / "psr_test_schema";
+
+        // Clean up from previous runs
+        if (fs::exists(test_db_path_)) {
+            fs::remove(test_db_path_);
+        }
+        if (fs::exists(test_schema_path_)) {
+            fs::remove_all(test_schema_path_);
+        }
+
+        // Create schema directory
+        fs::create_directories(test_schema_path_);
+    }
+
+    void TearDown() override {
+        if (fs::exists(test_db_path_)) {
+            fs::remove(test_db_path_);
+        }
+        if (fs::exists(test_schema_path_)) {
+            fs::remove_all(test_schema_path_);
+        }
+    }
+
+    void create_migration(int version, const std::string& sql) {
+        auto dir = test_schema_path_ / std::to_string(version);
+        fs::create_directories(dir);
+        std::ofstream(dir / "up.sql") << sql;
+    }
+
+    std::string test_db_path_;
+    fs::path test_schema_path_;
+};
+
+TEST_F(MigrationTest, FromSchemaBasic) {
+    create_migration(1, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);");
+    create_migration(2, "CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT);");
+
+    auto db = psr::Database::from_schema(test_db_path_, test_schema_path_.string());
+
+    EXPECT_TRUE(db.is_open());
+    EXPECT_EQ(db.current_version(), 2);
+
+    // Verify tables were created
+    auto result = db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
+    EXPECT_EQ(result.row_count(), 2u);
+    EXPECT_EQ(result[0].get_string(0), "posts");
+    EXPECT_EQ(result[1].get_string(0), "users");
+}
+
+TEST_F(MigrationTest, FromSchemaEmpty) {
+    // Empty schema folder, no migrations
+    auto db = psr::Database::from_schema(test_db_path_, test_schema_path_.string());
+
+    EXPECT_TRUE(db.is_open());
+    EXPECT_EQ(db.current_version(), 0);
+}
+
+TEST_F(MigrationTest, FromSchemaInvalidSql) {
+    create_migration(1, "CREATE TABLE valid_table (id INTEGER);");
+    create_migration(2, "THIS IS INVALID SQL;");
+
+    EXPECT_THROW(
+        psr::Database::from_schema(test_db_path_, test_schema_path_.string()),
+        std::runtime_error
+    );
+
+    // Open the database to check the state after failed migration
+    psr::Database db(test_db_path_);
+
+    // Migration 1 should have succeeded and been committed
+    EXPECT_EQ(db.current_version(), 1);
+
+    // valid_table should exist
+    auto result = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='valid_table'");
+    EXPECT_EQ(result.row_count(), 1u);
+}
+
+TEST_F(MigrationTest, FromSchemaReopenDatabase) {
+    create_migration(1, "CREATE TABLE test_table (id INTEGER);");
+
+    // First open - apply migrations
+    {
+        auto db = psr::Database::from_schema(test_db_path_, test_schema_path_.string());
+        EXPECT_EQ(db.current_version(), 1);
+        db.execute("INSERT INTO test_table (id) VALUES (42)");
+    }
+
+    // Second open - migrations should not be reapplied
+    {
+        auto db = psr::Database::from_schema(test_db_path_, test_schema_path_.string());
+        EXPECT_EQ(db.current_version(), 1);
+
+        // Data should still be there
+        auto result = db.execute("SELECT id FROM test_table");
+        EXPECT_EQ(result.row_count(), 1u);
+        EXPECT_EQ(result[0].get_int(0), 42);
+    }
+}
+
+TEST_F(MigrationTest, CurrentVersion) {
+    psr::Database db(test_db_path_);
+
+    EXPECT_EQ(db.current_version(), 0);
+
+    db.set_version(5);
+    EXPECT_EQ(db.current_version(), 5);
+
+    db.set_version(10);
+    EXPECT_EQ(db.current_version(), 10);
+}
+
+TEST_F(MigrationTest, MigrateUpIncremental) {
+    // Create initial migration
+    create_migration(1, "CREATE TABLE items (id INTEGER PRIMARY KEY);");
+
+    // First open with one migration
+    {
+        auto db = psr::Database::from_schema(test_db_path_, test_schema_path_.string());
+        EXPECT_EQ(db.current_version(), 1);
+    }
+
+    // Add new migration
+    create_migration(2, "ALTER TABLE items ADD COLUMN name TEXT;");
+
+    // Second open - should apply only new migration
+    {
+        auto db = psr::Database::from_schema(test_db_path_, test_schema_path_.string());
+        EXPECT_EQ(db.current_version(), 2);
+
+        // Verify the new column exists
+        db.execute("INSERT INTO items (id, name) VALUES (1, 'test')");
+        auto result = db.execute("SELECT name FROM items WHERE id = 1");
+        EXPECT_EQ(result[0].get_string(0), "test");
+    }
+}
+
+TEST_F(MigrationTest, SchemaPathMissing) {
+    EXPECT_THROW(
+        psr::Database::from_schema(test_db_path_, "/nonexistent/path"),
+        std::runtime_error
+    );
+}
+
+TEST_F(MigrationTest, IgnoresNonNumericFolders) {
+    create_migration(1, "CREATE TABLE t1 (id INTEGER);");
+
+    // Create non-numeric folders that should be ignored
+    fs::create_directories(test_schema_path_ / "readme");
+    fs::create_directories(test_schema_path_ / ".git");
+    fs::create_directories(test_schema_path_ / "backup_old");
+
+    auto db = psr::Database::from_schema(test_db_path_, test_schema_path_.string());
+    EXPECT_EQ(db.current_version(), 1);
+}
+
+TEST_F(MigrationTest, MissingUpSqlThrows) {
+    // Create a migration folder without up.sql
+    fs::create_directories(test_schema_path_ / "1");
+
+    EXPECT_THROW(
+        psr::Database::from_schema(test_db_path_, test_schema_path_.string()),
+        std::runtime_error
+    );
 }

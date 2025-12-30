@@ -4,6 +4,7 @@
 #include "export.h"
 #include "result.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -16,6 +17,9 @@ class PSR_API Database {
 public:
     explicit Database(const std::string& path);
     ~Database();
+
+    // Factory method for schema-based initialization
+    static Database from_schema(const std::string& database_path, const std::string& schema_path);
 
     // Non-copyable
     Database(const Database&) = delete;
@@ -40,6 +44,12 @@ public:
 
     const std::string& path() const;
     std::string error_message() const;
+
+    // Migration methods
+    int64_t current_version();
+    void set_version(int64_t version);
+    void migrate_up();
+    const std::string& schema_path() const;
 
 private:
     struct Impl;

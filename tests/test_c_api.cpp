@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <gtest/gtest.h>
 #include <string>
 
@@ -222,4 +223,117 @@ TEST_F(CApiTest, IndexOutOfRange) {
 
     psr_result_free(result);
     psr_database_close(db);
+}
+
+// Migration C API tests
+class CApiMigrationTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        test_db_path_ = (fs::temp_directory_path() / "psr_c_migration_test.db").string();
+        test_schema_path_ = fs::temp_directory_path() / "psr_c_test_schema";
+
+        // Clean up from previous runs
+        if (fs::exists(test_db_path_)) {
+            fs::remove(test_db_path_);
+        }
+        if (fs::exists(test_schema_path_)) {
+            fs::remove_all(test_schema_path_);
+        }
+
+        // Create schema directory
+        fs::create_directories(test_schema_path_);
+    }
+
+    void TearDown() override {
+        if (fs::exists(test_db_path_)) {
+            fs::remove(test_db_path_);
+        }
+        if (fs::exists(test_schema_path_)) {
+            fs::remove_all(test_schema_path_);
+        }
+    }
+
+    void create_migration(int version, const std::string& sql) {
+        auto dir = test_schema_path_ / std::to_string(version);
+        fs::create_directories(dir);
+        std::ofstream(dir / "up.sql") << sql;
+    }
+
+    std::string test_db_path_;
+    fs::path test_schema_path_;
+};
+
+TEST_F(CApiMigrationTest, FromSchemaBasic) {
+    create_migration(1, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);");
+    create_migration(2, "CREATE TABLE posts (id INTEGER PRIMARY KEY, title TEXT);");
+
+    psr_error_t error;
+    psr_database_t* db = psr_database_from_schema(
+        test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
+
+    ASSERT_NE(db, nullptr);
+    EXPECT_EQ(error, PSR_OK);
+    EXPECT_EQ(psr_database_current_version(db), 2);
+
+    // Verify tables exist
+    psr_result_t* result = psr_database_execute(
+        db, "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", &error);
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(psr_result_row_count(result), 2u);
+
+    psr_result_free(result);
+    psr_database_close(db);
+}
+
+TEST_F(CApiMigrationTest, FromSchemaEmpty) {
+    psr_error_t error;
+    psr_database_t* db = psr_database_from_schema(
+        test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
+
+    ASSERT_NE(db, nullptr);
+    EXPECT_EQ(error, PSR_OK);
+    EXPECT_EQ(psr_database_current_version(db), 0);
+
+    psr_database_close(db);
+}
+
+TEST_F(CApiMigrationTest, FromSchemaNullArgs) {
+    psr_error_t error;
+
+    psr_database_t* db1 = psr_database_from_schema(nullptr, test_schema_path_.string().c_str(), &error);
+    EXPECT_EQ(db1, nullptr);
+    EXPECT_EQ(error, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_t* db2 = psr_database_from_schema(test_db_path_.c_str(), nullptr, &error);
+    EXPECT_EQ(db2, nullptr);
+    EXPECT_EQ(error, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_F(CApiMigrationTest, CurrentVersionAndSetVersion) {
+    psr_error_t error;
+    psr_database_t* db = psr_database_open(test_db_path_.c_str(), &error);
+    ASSERT_NE(db, nullptr);
+
+    EXPECT_EQ(psr_database_current_version(db), 0);
+
+    EXPECT_EQ(psr_database_set_version(db, 5), PSR_OK);
+    EXPECT_EQ(psr_database_current_version(db), 5);
+
+    EXPECT_EQ(psr_database_set_version(db, 10), PSR_OK);
+    EXPECT_EQ(psr_database_current_version(db), 10);
+
+    psr_database_close(db);
+}
+
+TEST_F(CApiMigrationTest, MigrationErrorString) {
+    EXPECT_STREQ(psr_error_string(PSR_ERROR_MIGRATION), "Migration error");
+}
+
+TEST_F(CApiMigrationTest, FromSchemaInvalidPath) {
+    psr_error_t error;
+    psr_database_t* db = psr_database_from_schema(
+        test_db_path_.c_str(), "/nonexistent/path", &error);
+
+    EXPECT_EQ(db, nullptr);
+    EXPECT_EQ(error, PSR_ERROR_MIGRATION);
 }

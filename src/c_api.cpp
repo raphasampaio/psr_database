@@ -12,6 +12,7 @@ struct psr_database {
     psr::Database db;
     std::string last_error;
     explicit psr_database(const std::string& path) : db(path) {}
+    psr_database(psr::Database&& database) : db(std::move(database)) {}
 };
 
 struct psr_result {
@@ -42,6 +43,31 @@ PSR_C_API psr_database_t* psr_database_open(const char* path, psr_error_t* error
     } catch (const std::exception&) {
         if (error)
             *error = PSR_ERROR_DATABASE;
+        return nullptr;
+    }
+}
+
+PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path,
+                                                    psr_error_t* error) {
+    if (!db_path || !schema_path) {
+        if (error)
+            *error = PSR_ERROR_INVALID_ARGUMENT;
+        return nullptr;
+    }
+
+    try {
+        auto database = psr::Database::from_schema(db_path, schema_path);
+        auto* db = new psr_database(std::move(database));
+        if (error)
+            *error = PSR_OK;
+        return db;
+    } catch (const std::bad_alloc&) {
+        if (error)
+            *error = PSR_ERROR_NO_MEMORY;
+        return nullptr;
+    } catch (const std::exception&) {
+        if (error)
+            *error = PSR_ERROR_MIGRATION;
         return nullptr;
     }
 }
@@ -145,6 +171,43 @@ PSR_C_API const char* psr_database_error_message(psr_database_t* db) {
     return db->db.error_message().c_str();
 }
 
+// Migration functions
+
+PSR_C_API int64_t psr_database_current_version(psr_database_t* db) {
+    if (!db)
+        return 0;
+    try {
+        return db->db.current_version();
+    } catch (const std::exception& e) {
+        db->last_error = e.what();
+        return 0;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_set_version(psr_database_t* db, int64_t version) {
+    if (!db)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    try {
+        db->db.set_version(version);
+        return PSR_OK;
+    } catch (const std::exception& e) {
+        db->last_error = e.what();
+        return PSR_ERROR_QUERY;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_migrate_up(psr_database_t* db) {
+    if (!db)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    try {
+        db->db.migrate_up();
+        return PSR_OK;
+    } catch (const std::exception& e) {
+        db->last_error = e.what();
+        return PSR_ERROR_MIGRATION;
+    }
+}
+
 PSR_C_API const char* psr_error_string(psr_error_t error) {
     switch (error) {
     case PSR_OK:
@@ -161,6 +224,8 @@ PSR_C_API const char* psr_error_string(psr_error_t error) {
         return "Database not open";
     case PSR_ERROR_INDEX_OUT_OF_RANGE:
         return "Index out of range";
+    case PSR_ERROR_MIGRATION:
+        return "Migration error";
     default:
         return "Unknown error";
     }
