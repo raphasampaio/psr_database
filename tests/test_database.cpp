@@ -451,3 +451,10 @@ TEST_F(CreateElementTest, ThrowsOnEmptyFields) {
 TEST_F(CreateElementTest, ThrowsOnNonexistentTable) {
     EXPECT_THROW(db_->create_element("NonexistentTable", {{"col", std::string("val")}}), std::runtime_error);
 }
+
+TEST_F(CreateElementTest, ThrowsOnNonexistentColumn) {
+    // "type3" doesn't exist, should be "type"
+    EXPECT_THROW(
+        db_->create_element("Resource", {{"label", std::string("Resource 4")}, {"type3", std::string("E")}}),
+        std::runtime_error);
+}

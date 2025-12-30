@@ -523,3 +523,17 @@ TEST_F(CApiElementTest, CreateElementNullArguments) {
 
     psr_element_free(elem);
 }
+
+TEST_F(CApiElementTest, CreateElementErrorOnNonexistentColumn) {
+    // "type3" doesn't exist, should be "type"
+    psr_element_t* elem = psr_element_create();
+    psr_element_set_string(elem, "label", "Resource 4");
+    psr_element_set_string(elem, "type3", "E");  // Wrong column name
+
+    psr_error_t error;
+    int64_t id = psr_database_create_element(db_, "Resource", elem, &error);
+    psr_element_free(elem);
+
+    EXPECT_EQ(error, PSR_ERROR_QUERY);
+    EXPECT_EQ(id, 0);
+}
