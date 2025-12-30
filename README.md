@@ -1,5 +1,7 @@
 # psr_database
 
+[![codecov](https://codecov.io/gh/raphasampaio/psr_database/graph/badge.svg?token=TwhY6YNDNN)](https://codecov.io/gh/raphasampaio/psr_database)
+
 A cross-platform C++17 SQLite wrapper library with a C API for FFI integration.
 
 ## Features
