@@ -261,7 +261,8 @@ TEST_F(CApiMigrationTest, FromSchemaBasic) {
     create_migration(2, "CREATE TABLE posts (id INTEGER PRIMARY KEY, title TEXT);");
 
     psr_error_t error;
-    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), PSR_LOG_OFF, &error);
+    psr_database_t* db =
+        psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), PSR_LOG_OFF, &error);
 
     ASSERT_NE(db, nullptr);
     EXPECT_EQ(error, PSR_OK);
@@ -279,7 +280,8 @@ TEST_F(CApiMigrationTest, FromSchemaBasic) {
 
 TEST_F(CApiMigrationTest, FromSchemaEmpty) {
     psr_error_t error;
-    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), PSR_LOG_OFF, &error);
+    psr_database_t* db =
+        psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), PSR_LOG_OFF, &error);
 
     ASSERT_NE(db, nullptr);
     EXPECT_EQ(error, PSR_OK);

@@ -4,9 +4,9 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
-#include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 #include <sqlite3.h>
 #include <sstream>
 #include <stdexcept>
@@ -32,8 +32,7 @@ spdlog::level::level_enum to_spdlog_level(psr::LogLevel level) {
     }
 }
 
-std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path,
-                                                       psr::LogLevel console_level) {
+std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path, psr::LogLevel console_level) {
     namespace fs = std::filesystem;
 
     // Generate unique logger name for multiple Database instances
@@ -99,8 +98,7 @@ struct Database::Impl {
     }
 };
 
-Database::Database(const std::string& path, LogLevel console_level)
-    : impl_(std::make_unique<Impl>()) {
+Database::Database(const std::string& path, LogLevel console_level) : impl_(std::make_unique<Impl>()) {
     impl_->path = path;
     impl_->logger = create_database_logger(path, console_level);
 
@@ -265,8 +263,7 @@ std::string Database::error_message() const {
     return sqlite3_errmsg(impl_->db);
 }
 
-Database Database::from_schema(const std::string& database_path,
-                               const std::string& schema_path,
+Database Database::from_schema(const std::string& database_path, const std::string& schema_path,
                                LogLevel console_level) {
     // Validate schema path before creating database
     if (!std::filesystem::exists(schema_path)) {

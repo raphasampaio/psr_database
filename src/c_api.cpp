@@ -68,7 +68,8 @@ PSR_C_API psr_database_t* psr_database_open(const char* path, psr_log_level_t co
     }
 }
 
-PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path, psr_log_level_t console_level, psr_error_t* error) {
+PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path,
+                                                   psr_log_level_t console_level, psr_error_t* error) {
     if (!db_path || !schema_path) {
         if (error)
             *error = PSR_ERROR_INVALID_ARGUMENT;
