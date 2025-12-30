@@ -29,6 +29,7 @@ target_link_libraries(psr_database
     PRIVATE
         psr_compiler_options
         tomlplusplus::tomlplusplus
+        spdlog::spdlog
 )
 
 # Set library properties
