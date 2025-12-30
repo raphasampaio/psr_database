@@ -190,16 +190,22 @@ std::string Database::error_message() const {
 }
 
 Database Database::from_schema(const std::string& database_path, const std::string& schema_path) {
+    spdlog::info("Opening database from schema: db={}, schema={}", database_path, schema_path);
+
     if (!std::filesystem::exists(schema_path)) {
+        spdlog::error("Schema path does not exist: {}", schema_path);
         throw std::runtime_error("Schema path does not exist: " + schema_path);
     }
     if (!std::filesystem::is_directory(schema_path)) {
+        spdlog::error("Schema path is not a directory: {}", schema_path);
         throw std::runtime_error("Schema path is not a directory: " + schema_path);
     }
 
     Database db(database_path);
     db.impl_->schema_path = schema_path;
+    spdlog::debug("Database opened, current version: {}", db.current_version());
     db.migrate_up();
+    spdlog::info("Database ready, version: {}", db.current_version());
     return db;
 }
 
@@ -231,7 +237,8 @@ void Database::migrate_up() {
     }
 
     if (impl_->schema_path.empty()) {
-        return;  // No schema path set, nothing to migrate
+        spdlog::debug("No schema path set, skipping migrations");
+        return;
     }
 
     namespace fs = std::filesystem;
@@ -259,6 +266,7 @@ void Database::migrate_up() {
     std::sort(versions.begin(), versions.end());
 
     int64_t current = current_version();
+    spdlog::debug("Found {} migrations, current version: {}", versions.size(), current);
 
     // Apply each pending migration
     for (int64_t version : versions) {
@@ -270,12 +278,14 @@ void Database::migrate_up() {
         fs::path up_sql_path = migration_dir / "up.sql";
 
         if (!fs::exists(up_sql_path)) {
+            spdlog::error("Migration file not found: {}", up_sql_path.string());
             throw std::runtime_error("Migration file not found: " + up_sql_path.string());
         }
 
         // Read the SQL file
         std::ifstream file(up_sql_path);
         if (!file) {
+            spdlog::error("Failed to open migration file: {}", up_sql_path.string());
             throw std::runtime_error("Failed to open migration file: " + up_sql_path.string());
         }
 
@@ -284,13 +294,16 @@ void Database::migrate_up() {
         std::string sql = buffer.str();
 
         // Apply migration in a transaction
+        spdlog::info("Applying migration {}", version);
         begin_transaction();
         try {
             execute(sql);
             set_version(version);
             commit();
+            spdlog::debug("Migration {} applied successfully", version);
         } catch (const std::exception& e) {
             rollback();
+            spdlog::error("Migration {} failed: {}", version, e.what());
             throw std::runtime_error("Migration " + std::to_string(version) + " failed: " + e.what());
         }
     }
