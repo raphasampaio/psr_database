@@ -389,4 +389,48 @@ const std::string& Database::schema_path() const {
     return impl_->schema_path;
 }
 
+int64_t Database::create_element(const std::string& table,
+                                  const std::vector<std::pair<std::string, Value>>& fields) {
+    if (!is_open()) {
+        throw std::runtime_error("Database is not open");
+    }
+
+    if (table.empty()) {
+        throw std::runtime_error("Table name cannot be empty");
+    }
+
+    if (fields.empty()) {
+        throw std::runtime_error("Fields cannot be empty");
+    }
+
+    // Build INSERT statement: INSERT INTO table (col1, col2, ...) VALUES (?, ?, ...)
+    std::string sql = "INSERT INTO \"" + table + "\" (";
+    std::string placeholders;
+
+    for (size_t i = 0; i < fields.size(); ++i) {
+        if (i > 0) {
+            sql += ", ";
+            placeholders += ", ";
+        }
+        sql += "\"" + fields[i].first + "\"";
+        placeholders += "?";
+    }
+
+    sql += ") VALUES (" + placeholders + ")";
+
+    impl_->logger->debug("create_element SQL: {}", sql);
+
+    // Extract values for binding
+    std::vector<Value> values;
+    values.reserve(fields.size());
+    for (const auto& field : fields) {
+        values.push_back(field.second);
+    }
+
+    // Execute the insert
+    execute(sql, values);
+
+    return last_insert_rowid();
+}
+
 }  // namespace psr

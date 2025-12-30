@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 struct sqlite3;
@@ -53,6 +54,10 @@ public:
     void set_version(int64_t version);
     void migrate_up();
     const std::string& schema_path() const;
+
+    // Element creation
+    int64_t create_element(const std::string& table,
+                           const std::vector<std::pair<std::string, Value>>& fields);
 
 private:
     struct Impl;

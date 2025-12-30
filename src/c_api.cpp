@@ -5,6 +5,7 @@
 
 #include <new>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -39,6 +40,10 @@ struct psr_database {
 struct psr_result {
     psr::Result result;
     explicit psr_result(psr::Result r) : result(std::move(r)) {}
+};
+
+struct psr_element {
+    std::vector<std::pair<std::string, psr::Value>> fields;
 };
 
 extern "C" {
@@ -225,6 +230,84 @@ PSR_C_API psr_error_t psr_database_migrate_up(psr_database_t* db) {
     } catch (const std::exception& e) {
         db->last_error = e.what();
         return PSR_ERROR_MIGRATION;
+    }
+}
+
+// Element builder functions
+
+PSR_C_API psr_element_t* psr_element_create(void) {
+    try {
+        return new psr_element();
+    } catch (const std::bad_alloc&) {
+        return nullptr;
+    }
+}
+
+PSR_C_API void psr_element_free(psr_element_t* elem) {
+    delete elem;
+}
+
+PSR_C_API psr_error_t psr_element_set_null(psr_element_t* elem, const char* column) {
+    if (!elem || !column)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    elem->fields.emplace_back(column, nullptr);
+    return PSR_OK;
+}
+
+PSR_C_API psr_error_t psr_element_set_int(psr_element_t* elem, const char* column, int64_t value) {
+    if (!elem || !column)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    elem->fields.emplace_back(column, value);
+    return PSR_OK;
+}
+
+PSR_C_API psr_error_t psr_element_set_double(psr_element_t* elem, const char* column, double value) {
+    if (!elem || !column)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    elem->fields.emplace_back(column, value);
+    return PSR_OK;
+}
+
+PSR_C_API psr_error_t psr_element_set_string(psr_element_t* elem, const char* column, const char* value) {
+    if (!elem || !column)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    if (value) {
+        elem->fields.emplace_back(column, std::string(value));
+    } else {
+        elem->fields.emplace_back(column, nullptr);
+    }
+    return PSR_OK;
+}
+
+PSR_C_API psr_error_t psr_element_set_blob(psr_element_t* elem, const char* column, const uint8_t* data, size_t size) {
+    if (!elem || !column)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    if (data && size > 0) {
+        elem->fields.emplace_back(column, std::vector<uint8_t>(data, data + size));
+    } else {
+        elem->fields.emplace_back(column, std::vector<uint8_t>());
+    }
+    return PSR_OK;
+}
+
+PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* table, psr_element_t* elem,
+                                               psr_error_t* error) {
+    if (!db || !table || !elem) {
+        if (error)
+            *error = PSR_ERROR_INVALID_ARGUMENT;
+        return 0;
+    }
+
+    try {
+        int64_t rowid = db->db.create_element(table, elem->fields);
+        if (error)
+            *error = PSR_OK;
+        return rowid;
+    } catch (const std::exception& e) {
+        db->last_error = e.what();
+        if (error)
+            *error = PSR_ERROR_QUERY;
+        return 0;
     }
 }
 

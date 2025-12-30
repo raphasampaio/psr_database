@@ -329,3 +329,197 @@ TEST_F(CApiMigrationTest, FromSchemaInvalidPath) {
     EXPECT_EQ(db, nullptr);
     EXPECT_EQ(error, PSR_ERROR_MIGRATION);
 }
+
+// Element builder C API tests
+class CApiElementTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        psr_error_t error;
+        db_ = psr_database_open(":memory:", PSR_LOG_OFF, &error);
+        ASSERT_NE(db_, nullptr);
+
+        // Create test schema
+        psr_result_t* r1 = psr_database_execute(
+            db_,
+            "CREATE TABLE Resource (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT UNIQUE NOT NULL, "
+            "type TEXT NOT NULL DEFAULT 'D' CHECK(type IN ('D', 'E', 'F'))) STRICT",
+            &error);
+        psr_result_free(r1);
+
+        psr_result_t* r2 = psr_database_execute(
+            db_,
+            "CREATE TABLE Configuration (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL, "
+            "value1 REAL NOT NULL DEFAULT 100, date_time_value2 TEXT) STRICT",
+            &error);
+        psr_result_free(r2);
+    }
+
+    void TearDown() override { psr_database_close(db_); }
+
+    psr_database_t* db_;
+};
+
+TEST_F(CApiElementTest, ElementCreateAndFree) {
+    psr_element_t* elem = psr_element_create();
+    ASSERT_NE(elem, nullptr);
+    psr_element_free(elem);
+}
+
+TEST_F(CApiElementTest, ElementSetString) {
+    psr_element_t* elem = psr_element_create();
+    ASSERT_NE(elem, nullptr);
+
+    EXPECT_EQ(psr_element_set_string(elem, "label", "Test"), PSR_OK);
+
+    psr_error_t error;
+    int64_t id = psr_database_create_element(db_, "Resource", elem, &error);
+    psr_element_free(elem);
+
+    EXPECT_EQ(error, PSR_OK);
+    EXPECT_EQ(id, 1);
+
+    psr_result_t* result = psr_database_execute(db_, "SELECT label FROM Resource WHERE id = 1", &error);
+    EXPECT_STREQ(psr_result_get_string(result, 0, 0), "Test");
+    psr_result_free(result);
+}
+
+TEST_F(CApiElementTest, ElementSetMultipleFields) {
+    psr_element_t* elem = psr_element_create();
+
+    psr_element_set_string(elem, "label", "Config 1");
+    psr_element_set_double(elem, "value1", 42.5);
+
+    psr_error_t error;
+    int64_t id = psr_database_create_element(db_, "Configuration", elem, &error);
+    psr_element_free(elem);
+
+    EXPECT_EQ(error, PSR_OK);
+    EXPECT_EQ(id, 1);
+
+    psr_result_t* result = psr_database_execute(db_, "SELECT label, value1 FROM Configuration WHERE id = 1", &error);
+    EXPECT_STREQ(psr_result_get_string(result, 0, 0), "Config 1");
+
+    double value;
+    psr_result_get_double(result, 0, 1, &value);
+    EXPECT_DOUBLE_EQ(value, 42.5);
+    psr_result_free(result);
+}
+
+TEST_F(CApiElementTest, ElementSetNull) {
+    psr_element_t* elem = psr_element_create();
+
+    psr_element_set_string(elem, "label", "Null Test");
+    psr_element_set_double(elem, "value1", 10.0);
+    psr_element_set_null(elem, "date_time_value2");
+
+    psr_error_t error;
+    int64_t id = psr_database_create_element(db_, "Configuration", elem, &error);
+    psr_element_free(elem);
+
+    EXPECT_EQ(error, PSR_OK);
+    EXPECT_EQ(id, 1);
+
+    psr_result_t* result =
+        psr_database_execute(db_, "SELECT date_time_value2 FROM Configuration WHERE id = 1", &error);
+    EXPECT_EQ(psr_result_is_null(result, 0, 0), 1);
+    psr_result_free(result);
+}
+
+TEST_F(CApiElementTest, ElementSetInt) {
+    // Create a table with integer column for this test
+    psr_error_t error;
+    psr_result_t* r = psr_database_execute(db_, "CREATE TABLE IntTest (id INTEGER PRIMARY KEY, count INTEGER)", &error);
+    psr_result_free(r);
+
+    psr_element_t* elem = psr_element_create();
+    psr_element_set_int(elem, "count", 42);
+
+    int64_t id = psr_database_create_element(db_, "IntTest", elem, &error);
+    psr_element_free(elem);
+
+    EXPECT_EQ(error, PSR_OK);
+    EXPECT_EQ(id, 1);
+
+    psr_result_t* result = psr_database_execute(db_, "SELECT count FROM IntTest WHERE id = 1", &error);
+    int64_t count;
+    psr_result_get_int(result, 0, 0, &count);
+    EXPECT_EQ(count, 42);
+    psr_result_free(result);
+}
+
+TEST_F(CApiElementTest, CreateElementReturnsCorrectRowId) {
+    psr_error_t error;
+
+    for (int i = 1; i <= 3; ++i) {
+        psr_element_t* elem = psr_element_create();
+        std::string label = "Resource " + std::to_string(i);
+        psr_element_set_string(elem, "label", label.c_str());
+
+        int64_t id = psr_database_create_element(db_, "Resource", elem, &error);
+        psr_element_free(elem);
+
+        EXPECT_EQ(error, PSR_OK);
+        EXPECT_EQ(id, i);
+    }
+}
+
+TEST_F(CApiElementTest, CreateElementErrorOnInvalidTable) {
+    psr_element_t* elem = psr_element_create();
+    psr_element_set_string(elem, "label", "Test");
+
+    psr_error_t error;
+    int64_t id = psr_database_create_element(db_, "NonexistentTable", elem, &error);
+    psr_element_free(elem);
+
+    EXPECT_EQ(error, PSR_ERROR_QUERY);
+    EXPECT_EQ(id, 0);
+}
+
+TEST_F(CApiElementTest, CreateElementErrorOnConstraintViolation) {
+    psr_element_t* elem1 = psr_element_create();
+    psr_element_set_string(elem1, "label", "Duplicate");
+
+    psr_error_t error;
+    psr_database_create_element(db_, "Resource", elem1, &error);
+    psr_element_free(elem1);
+
+    // Try to insert duplicate
+    psr_element_t* elem2 = psr_element_create();
+    psr_element_set_string(elem2, "label", "Duplicate");
+
+    int64_t id = psr_database_create_element(db_, "Resource", elem2, &error);
+    psr_element_free(elem2);
+
+    EXPECT_EQ(error, PSR_ERROR_QUERY);
+    EXPECT_EQ(id, 0);
+}
+
+TEST_F(CApiElementTest, ElementSetNullArguments) {
+    psr_element_t* elem = psr_element_create();
+
+    EXPECT_EQ(psr_element_set_string(nullptr, "col", "val"), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_string(elem, nullptr, "val"), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_int(nullptr, "col", 1), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_double(nullptr, "col", 1.0), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_null(nullptr, "col"), PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_element_free(elem);
+}
+
+TEST_F(CApiElementTest, CreateElementNullArguments) {
+    psr_element_t* elem = psr_element_create();
+    psr_element_set_string(elem, "label", "Test");
+
+    psr_error_t error;
+
+    EXPECT_EQ(psr_database_create_element(nullptr, "Resource", elem, &error), 0);
+    EXPECT_EQ(error, PSR_ERROR_INVALID_ARGUMENT);
+
+    EXPECT_EQ(psr_database_create_element(db_, nullptr, elem, &error), 0);
+    EXPECT_EQ(error, PSR_ERROR_INVALID_ARGUMENT);
+
+    EXPECT_EQ(psr_database_create_element(db_, "Resource", nullptr, &error), 0);
+    EXPECT_EQ(error, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_element_free(elem);
+}

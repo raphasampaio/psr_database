@@ -341,3 +341,113 @@ TEST_F(MigrationTest, MissingUpSqlThrows) {
 
     EXPECT_THROW(psr::Database::from_schema(test_db_path_, test_schema_path_.string()), std::runtime_error);
 }
+
+// Element creation tests
+class CreateElementTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        db_ = std::make_unique<psr::Database>(":memory:", psr::LogLevel::off);
+
+        // Create test schema similar to the user's example
+        db_->execute(R"(
+            CREATE TABLE Configuration (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                label TEXT UNIQUE NOT NULL,
+                value1 REAL NOT NULL DEFAULT 100,
+                date_time_value2 TEXT,
+                enum1 TEXT NOT NULL DEFAULT 'A' CHECK(enum1 IN ('A', 'B', 'C'))
+            ) STRICT
+        )");
+
+        db_->execute(R"(
+            CREATE TABLE Resource (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                label TEXT UNIQUE NOT NULL,
+                type TEXT NOT NULL DEFAULT 'D' CHECK(type IN ('D', 'E', 'F'))
+            ) STRICT
+        )");
+    }
+
+    std::unique_ptr<psr::Database> db_;
+};
+
+TEST_F(CreateElementTest, InsertWithRequiredFields) {
+    // Insert with just required field, others use defaults
+    int64_t id = db_->create_element("Resource", {{"label", std::string("Resource 1")}});
+
+    EXPECT_EQ(id, 1);
+
+    auto result = db_->execute("SELECT * FROM Resource WHERE id = 1");
+    EXPECT_EQ(result.row_count(), 1u);
+    EXPECT_EQ(result[0].get_string(1), "Resource 1");
+    EXPECT_EQ(result[0].get_string(2), "D");  // Default value
+}
+
+TEST_F(CreateElementTest, InsertWithOptionalFields) {
+    int64_t id = db_->create_element("Resource", {{"label", std::string("Resource 2")}, {"type", std::string("E")}});
+
+    EXPECT_EQ(id, 1);
+
+    auto result = db_->execute("SELECT * FROM Resource WHERE id = 1");
+    EXPECT_EQ(result[0].get_string(1), "Resource 2");
+    EXPECT_EQ(result[0].get_string(2), "E");
+}
+
+TEST_F(CreateElementTest, InsertWithNullValue) {
+    int64_t id = db_->create_element(
+        "Configuration",
+        {{"label", std::string("Config 1")}, {"value1", 50.0}, {"date_time_value2", nullptr}});
+
+    EXPECT_EQ(id, 1);
+
+    auto result = db_->execute("SELECT * FROM Configuration WHERE id = 1");
+    EXPECT_EQ(result[0].get_string(1), "Config 1");
+    EXPECT_DOUBLE_EQ(*result[0].get_double(2), 50.0);
+    EXPECT_TRUE(result[0].is_null(3));
+}
+
+TEST_F(CreateElementTest, InsertMultipleRows) {
+    int64_t id1 = db_->create_element("Resource", {{"label", std::string("Resource 1")}});
+    int64_t id2 = db_->create_element("Resource", {{"label", std::string("Resource 2")}, {"type", std::string("E")}});
+    int64_t id3 = db_->create_element("Resource", {{"label", std::string("Resource 3")}, {"type", std::string("F")}});
+
+    EXPECT_EQ(id1, 1);
+    EXPECT_EQ(id2, 2);
+    EXPECT_EQ(id3, 3);
+
+    auto result = db_->execute("SELECT COUNT(*) FROM Resource");
+    EXPECT_EQ(result[0].get_int(0), 3);
+}
+
+TEST_F(CreateElementTest, ThrowsOnTypeMismatch) {
+    // STRICT table with REAL column should reject string
+    EXPECT_THROW(
+        db_->create_element("Configuration", {{"label", std::string("Test")}, {"value1", std::string("wrong")}}),
+        std::runtime_error);
+}
+
+TEST_F(CreateElementTest, ThrowsOnConstraintViolation) {
+    db_->create_element("Resource", {{"label", std::string("Duplicate")}});
+
+    // UNIQUE constraint violation
+    EXPECT_THROW(db_->create_element("Resource", {{"label", std::string("Duplicate")}}), std::runtime_error);
+}
+
+TEST_F(CreateElementTest, ThrowsOnCheckConstraintViolation) {
+    // enum1 CHECK constraint violation
+    EXPECT_THROW(
+        db_->create_element("Configuration", {{"label", std::string("Test")}, {"enum1", std::string("INVALID")}}),
+        std::runtime_error);
+}
+
+TEST_F(CreateElementTest, ThrowsOnEmptyTable) {
+    EXPECT_THROW(db_->create_element("", {{"label", std::string("Test")}}), std::runtime_error);
+}
+
+TEST_F(CreateElementTest, ThrowsOnEmptyFields) {
+    EXPECT_THROW(db_->create_element("Resource", {}), std::runtime_error);
+}
+
+TEST_F(CreateElementTest, ThrowsOnNonexistentTable) {
+    EXPECT_THROW(db_->create_element("NonexistentTable", {{"col", std::string("val")}}), std::runtime_error);
+}

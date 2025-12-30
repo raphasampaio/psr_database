@@ -43,6 +43,7 @@ typedef enum {
 // Opaque handle types
 typedef struct psr_database psr_database_t;
 typedef struct psr_result psr_result_t;
+typedef struct psr_element psr_element_t;
 
 // Database functions
 PSR_C_API psr_database_t* psr_database_open(const char* path, psr_log_level_t console_level, psr_error_t* error);
@@ -62,6 +63,17 @@ PSR_C_API const char* psr_database_error_message(psr_database_t* db);
 PSR_C_API int64_t psr_database_current_version(psr_database_t* db);
 PSR_C_API psr_error_t psr_database_set_version(psr_database_t* db, int64_t version);
 PSR_C_API psr_error_t psr_database_migrate_up(psr_database_t* db);
+
+// Element builder functions (for dynamic row creation)
+PSR_C_API psr_element_t* psr_element_create(void);
+PSR_C_API void psr_element_free(psr_element_t* elem);
+PSR_C_API psr_error_t psr_element_set_null(psr_element_t* elem, const char* column);
+PSR_C_API psr_error_t psr_element_set_int(psr_element_t* elem, const char* column, int64_t value);
+PSR_C_API psr_error_t psr_element_set_double(psr_element_t* elem, const char* column, double value);
+PSR_C_API psr_error_t psr_element_set_string(psr_element_t* elem, const char* column, const char* value);
+PSR_C_API psr_error_t psr_element_set_blob(psr_element_t* elem, const char* column, const uint8_t* data, size_t size);
+PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* table, psr_element_t* elem,
+                                               psr_error_t* error);
 
 // Utility functions
 PSR_C_API const char* psr_error_string(psr_error_t error);
