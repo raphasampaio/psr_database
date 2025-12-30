@@ -1,11 +1,10 @@
 #include "psr/database.h"
 
-#include <sqlite3.h>
-#include <spdlog/spdlog.h>
-
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <spdlog/spdlog.h>
+#include <sqlite3.h>
 #include <sstream>
 #include <stdexcept>
 
@@ -304,7 +303,8 @@ void Database::migrate_up() {
         } catch (const std::exception& e) {
             rollback();
             spdlog::error("Migration {} failed: {}", version, e.what());
-            throw std::runtime_error("Migration " + std::to_string(version) + " failed: " + e.what());
+            throw std::runtime_error("Migration " + std::to_string(version) +
+                                     " failed: " + e.what());
         }
     }
 }

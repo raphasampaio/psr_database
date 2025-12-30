@@ -37,10 +37,12 @@ typedef struct psr_result psr_result_t;
 
 // Database functions
 PSR_C_API psr_database_t* psr_database_open(const char* path, psr_error_t* error);
-PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path, psr_error_t* error);
+PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path,
+                                                   psr_error_t* error);
 PSR_C_API void psr_database_close(psr_database_t* db);
 PSR_C_API int psr_database_is_open(psr_database_t* db);
-PSR_C_API psr_result_t* psr_database_execute(psr_database_t* db, const char* sql, psr_error_t* error);
+PSR_C_API psr_result_t* psr_database_execute(psr_database_t* db, const char* sql,
+                                             psr_error_t* error);
 PSR_C_API int64_t psr_database_last_insert_rowid(psr_database_t* db);
 PSR_C_API int psr_database_changes(psr_database_t* db);
 PSR_C_API psr_error_t psr_database_begin_transaction(psr_database_t* db);
@@ -61,4 +63,4 @@ PSR_C_API const char* psr_version(void);
 }
 #endif
 
-#endif // PSR_DATABASE_H
+#endif  // PSR_DATABASE_H

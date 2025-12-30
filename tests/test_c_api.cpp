@@ -1,9 +1,8 @@
-#include <psr/c/result.h>
-
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <psr/c/result.h>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -268,8 +267,8 @@ TEST_F(CApiMigrationTest, FromSchemaBasic) {
     create_migration(2, "CREATE TABLE posts (id INTEGER PRIMARY KEY, title TEXT);");
 
     psr_error_t error;
-    psr_database_t* db = psr_database_from_schema(
-        test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
+    psr_database_t* db =
+        psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
 
     ASSERT_NE(db, nullptr);
     EXPECT_EQ(error, PSR_OK);
@@ -287,8 +286,8 @@ TEST_F(CApiMigrationTest, FromSchemaBasic) {
 
 TEST_F(CApiMigrationTest, FromSchemaEmpty) {
     psr_error_t error;
-    psr_database_t* db = psr_database_from_schema(
-        test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
+    psr_database_t* db =
+        psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
 
     ASSERT_NE(db, nullptr);
     EXPECT_EQ(error, PSR_OK);
@@ -300,7 +299,8 @@ TEST_F(CApiMigrationTest, FromSchemaEmpty) {
 TEST_F(CApiMigrationTest, FromSchemaNullArgs) {
     psr_error_t error;
 
-    psr_database_t* db1 = psr_database_from_schema(nullptr, test_schema_path_.string().c_str(), &error);
+    psr_database_t* db1 =
+        psr_database_from_schema(nullptr, test_schema_path_.string().c_str(), &error);
     EXPECT_EQ(db1, nullptr);
     EXPECT_EQ(error, PSR_ERROR_INVALID_ARGUMENT);
 
@@ -331,8 +331,8 @@ TEST_F(CApiMigrationTest, MigrationErrorString) {
 
 TEST_F(CApiMigrationTest, FromSchemaInvalidPath) {
     psr_error_t error;
-    psr_database_t* db = psr_database_from_schema(
-        test_db_path_.c_str(), "/nonexistent/path", &error);
+    psr_database_t* db =
+        psr_database_from_schema(test_db_path_.c_str(), "/nonexistent/path", &error);
 
     EXPECT_EQ(db, nullptr);
     EXPECT_EQ(error, PSR_ERROR_MIGRATION);

@@ -48,7 +48,7 @@ PSR_C_API psr_database_t* psr_database_open(const char* path, psr_error_t* error
 }
 
 PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path,
-                                                    psr_error_t* error) {
+                                                   psr_error_t* error) {
     if (!db_path || !schema_path) {
         if (error)
             *error = PSR_ERROR_INVALID_ARGUMENT;
@@ -347,4 +347,4 @@ PSR_C_API const uint8_t* psr_result_get_blob(psr_result_t* result, size_t row, s
     return nullptr;
 }
 
-} // extern "C"
+}  // extern "C"
