@@ -1,12 +1,87 @@
 #include "psr/database.h"
 
 #include <algorithm>
+#include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <sqlite3.h>
 #include <sstream>
 #include <stdexcept>
+
+namespace {
+
+std::atomic<uint64_t> g_logger_counter{0};
+
+spdlog::level::level_enum to_spdlog_level(psr::LogLevel level) {
+    switch (level) {
+    case psr::LogLevel::debug:
+        return spdlog::level::debug;
+    case psr::LogLevel::info:
+        return spdlog::level::info;
+    case psr::LogLevel::warn:
+        return spdlog::level::warn;
+    case psr::LogLevel::error:
+        return spdlog::level::err;
+    case psr::LogLevel::off:
+        return spdlog::level::off;
+    default:
+        return spdlog::level::info;
+    }
+}
+
+std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path,
+                                                       psr::LogLevel console_level) {
+    namespace fs = std::filesystem;
+
+    // Generate unique logger name for multiple Database instances
+    uint64_t id = g_logger_counter.fetch_add(1);
+    std::string logger_name = "psr_database_" + std::to_string(id);
+
+    // Create console sink (thread-safe)
+    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    console_sink->set_level(to_spdlog_level(console_level));
+
+    // Determine log file path
+    std::string log_file_path;
+
+    if (db_path == ":memory:" || db_path.empty()) {
+        // In-memory database: use current working directory
+        log_file_path = (fs::current_path() / "psr_database.log").string();
+    } else {
+        // File-based database: use database directory
+        fs::path db_dir = fs::path(db_path).parent_path();
+        if (db_dir.empty()) {
+            // Database file in current directory (no path separator)
+            db_dir = fs::current_path();
+        }
+        log_file_path = (db_dir / "psr_database.log").string();
+    }
+
+    // Create file sink (thread-safe)
+    std::shared_ptr<spdlog::sinks::basic_file_sink_mt> file_sink;
+    try {
+        file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_file_path, true);
+        file_sink->set_level(spdlog::level::debug);
+    } catch (const spdlog::spdlog_ex& ex) {
+        // If file sink creation fails, continue with console-only logging
+        auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
+        logger->set_level(spdlog::level::debug);
+        logger->warn("Failed to create file sink: {}. Logging to console only.", ex.what());
+        return logger;
+    }
+
+    // Create logger with both sinks
+    std::vector<spdlog::sink_ptr> sinks{console_sink, file_sink};
+    auto logger = std::make_shared<spdlog::logger>(logger_name, sinks.begin(), sinks.end());
+    logger->set_level(spdlog::level::debug);
+
+    return logger;
+}
+
+}  // anonymous namespace
 
 namespace psr {
 
@@ -15,6 +90,7 @@ struct Database::Impl {
     std::string path;
     std::string schema_path;
     std::string last_error;
+    std::shared_ptr<spdlog::logger> logger;
 
     ~Impl() {
         if (db) {
@@ -23,12 +99,17 @@ struct Database::Impl {
     }
 };
 
-Database::Database(const std::string& path) : impl_(std::make_unique<Impl>()) {
+Database::Database(const std::string& path, LogLevel console_level)
+    : impl_(std::make_unique<Impl>()) {
     impl_->path = path;
+    impl_->logger = create_database_logger(path, console_level);
+
+    impl_->logger->debug("Opening database: {}", path);
 
     int rc = sqlite3_open(path.c_str(), &impl_->db);
     if (rc != SQLITE_OK) {
         std::string error = sqlite3_errmsg(impl_->db);
+        impl_->logger->error("Failed to open database: {}", error);
         sqlite3_close(impl_->db);
         impl_->db = nullptr;
         throw std::runtime_error("Failed to open database: " + error);
@@ -36,6 +117,7 @@ Database::Database(const std::string& path) : impl_(std::make_unique<Impl>()) {
 
     // Enable foreign keys
     sqlite3_exec(impl_->db, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
+    impl_->logger->debug("Database opened successfully, foreign keys enabled");
 }
 
 Database::~Database() = default;
@@ -183,23 +265,26 @@ std::string Database::error_message() const {
     return sqlite3_errmsg(impl_->db);
 }
 
-Database Database::from_schema(const std::string& database_path, const std::string& schema_path) {
-    spdlog::info("Opening database from schema: db={}, schema={}", database_path, schema_path);
-
+Database Database::from_schema(const std::string& database_path,
+                               const std::string& schema_path,
+                               LogLevel console_level) {
+    // Validate schema path before creating database
     if (!std::filesystem::exists(schema_path)) {
-        spdlog::error("Schema path does not exist: {}", schema_path);
         throw std::runtime_error("Schema path does not exist: " + schema_path);
     }
     if (!std::filesystem::is_directory(schema_path)) {
-        spdlog::error("Schema path is not a directory: {}", schema_path);
         throw std::runtime_error("Schema path is not a directory: " + schema_path);
     }
 
-    Database db(database_path);
+    Database db(database_path, console_level);
     db.impl_->schema_path = schema_path;
-    spdlog::debug("Database opened, current version: {}", db.current_version());
+
+    db.impl_->logger->info("Opening database from schema: db={}, schema={}", database_path, schema_path);
+    db.impl_->logger->debug("Database opened, current version: {}", db.current_version());
+
     db.migrate_up();
-    spdlog::info("Database ready, version: {}", db.current_version());
+
+    db.impl_->logger->info("Database ready, version: {}", db.current_version());
     return db;
 }
 
@@ -231,7 +316,7 @@ void Database::migrate_up() {
     }
 
     if (impl_->schema_path.empty()) {
-        spdlog::debug("No schema path set, skipping migrations");
+        impl_->logger->debug("No schema path set, skipping migrations");
         return;
     }
 
@@ -260,7 +345,7 @@ void Database::migrate_up() {
     std::sort(versions.begin(), versions.end());
 
     int64_t current = current_version();
-    spdlog::debug("Found {} migrations, current version: {}", versions.size(), current);
+    impl_->logger->debug("Found {} migrations, current version: {}", versions.size(), current);
 
     // Apply each pending migration
     for (int64_t version : versions) {
@@ -272,14 +357,14 @@ void Database::migrate_up() {
         fs::path up_sql_path = migration_dir / "up.sql";
 
         if (!fs::exists(up_sql_path)) {
-            spdlog::error("Migration file not found: {}", up_sql_path.string());
+            impl_->logger->error("Migration file not found: {}", up_sql_path.string());
             throw std::runtime_error("Migration file not found: " + up_sql_path.string());
         }
 
         // Read the SQL file
         std::ifstream file(up_sql_path);
         if (!file) {
-            spdlog::error("Failed to open migration file: {}", up_sql_path.string());
+            impl_->logger->error("Failed to open migration file: {}", up_sql_path.string());
             throw std::runtime_error("Failed to open migration file: " + up_sql_path.string());
         }
 
@@ -288,16 +373,16 @@ void Database::migrate_up() {
         std::string sql = buffer.str();
 
         // Apply migration in a transaction
-        spdlog::info("Applying migration {}", version);
+        impl_->logger->info("Applying migration {}", version);
         begin_transaction();
         try {
             execute(sql);
             set_version(version);
             commit();
-            spdlog::debug("Migration {} applied successfully", version);
+            impl_->logger->debug("Migration {} applied successfully", version);
         } catch (const std::exception& e) {
             rollback();
-            spdlog::error("Migration {} failed: {}", version, e.what());
+            impl_->logger->error("Migration {} failed: {}", version, e.what());
             throw std::runtime_error("Migration " + std::to_string(version) + " failed: " + e.what());
         }
     }

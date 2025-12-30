@@ -13,13 +13,17 @@ struct sqlite3;
 
 namespace psr {
 
+enum class LogLevel { debug, info, warn, error, off };
+
 class PSR_API Database {
 public:
-    explicit Database(const std::string& path);
+    explicit Database(const std::string& path, LogLevel console_level = LogLevel::info);
     ~Database();
 
     // Factory method for schema-based initialization
-    static Database from_schema(const std::string& database_path, const std::string& schema_path);
+    static Database from_schema(const std::string& database_path,
+                                const std::string& schema_path,
+                                LogLevel console_level = LogLevel::info);
 
     // Non-copyable
     Database(const Database&) = delete;

@@ -31,13 +31,22 @@ typedef enum {
     PSR_ERROR_MIGRATION = -7,
 } psr_error_t;
 
+// Log levels for console output
+typedef enum {
+    PSR_LOG_DEBUG = 0,
+    PSR_LOG_INFO = 1,
+    PSR_LOG_WARN = 2,
+    PSR_LOG_ERROR = 3,
+    PSR_LOG_OFF = 4,
+} psr_log_level_t;
+
 // Opaque handle types
 typedef struct psr_database psr_database_t;
 typedef struct psr_result psr_result_t;
 
 // Database functions
-PSR_C_API psr_database_t* psr_database_open(const char* path, psr_error_t* error);
-PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path, psr_error_t* error);
+PSR_C_API psr_database_t* psr_database_open(const char* path, psr_log_level_t console_level, psr_error_t* error);
+PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path, psr_log_level_t console_level, psr_error_t* error);
 PSR_C_API void psr_database_close(psr_database_t* db);
 PSR_C_API int psr_database_is_open(psr_database_t* db);
 PSR_C_API psr_result_t* psr_database_execute(psr_database_t* db, const char* sql, psr_error_t* error);

@@ -22,7 +22,7 @@ protected:
 
 TEST_F(CApiTest, OpenAndClose) {
     psr_error_t error;
-    psr_database_t* db = psr_database_open(test_db_path_.c_str(), &error);
+    psr_database_t* db = psr_database_open(test_db_path_.c_str(), PSR_LOG_OFF, &error);
 
     ASSERT_NE(db, nullptr);
     EXPECT_EQ(error, PSR_OK);
@@ -33,7 +33,7 @@ TEST_F(CApiTest, OpenAndClose) {
 
 TEST_F(CApiTest, OpenInMemory) {
     psr_error_t error;
-    psr_database_t* db = psr_database_open(":memory:", &error);
+    psr_database_t* db = psr_database_open(":memory:", PSR_LOG_OFF, &error);
 
     ASSERT_NE(db, nullptr);
     EXPECT_EQ(error, PSR_OK);
@@ -43,7 +43,7 @@ TEST_F(CApiTest, OpenInMemory) {
 
 TEST_F(CApiTest, OpenNullPath) {
     psr_error_t error;
-    psr_database_t* db = psr_database_open(nullptr, &error);
+    psr_database_t* db = psr_database_open(nullptr, PSR_LOG_OFF, &error);
 
     EXPECT_EQ(db, nullptr);
     EXPECT_EQ(error, PSR_ERROR_INVALID_ARGUMENT);
@@ -51,7 +51,7 @@ TEST_F(CApiTest, OpenNullPath) {
 
 TEST_F(CApiTest, ExecuteQuery) {
     psr_error_t error;
-    psr_database_t* db = psr_database_open(":memory:", &error);
+    psr_database_t* db = psr_database_open(":memory:", PSR_LOG_OFF, &error);
     ASSERT_NE(db, nullptr);
 
     psr_result_t* result = psr_database_execute(db, "CREATE TABLE test (id INTEGER PRIMARY KEY)", &error);
@@ -64,7 +64,7 @@ TEST_F(CApiTest, ExecuteQuery) {
 
 TEST_F(CApiTest, InsertAndSelect) {
     psr_error_t error;
-    psr_database_t* db = psr_database_open(":memory:", &error);
+    psr_database_t* db = psr_database_open(":memory:", PSR_LOG_OFF, &error);
     ASSERT_NE(db, nullptr);
 
     psr_result_t* r1 =
@@ -104,7 +104,7 @@ TEST_F(CApiTest, InsertAndSelect) {
 
 TEST_F(CApiTest, ValueTypes) {
     psr_error_t error;
-    psr_database_t* db = psr_database_open(":memory:", &error);
+    psr_database_t* db = psr_database_open(":memory:", PSR_LOG_OFF, &error);
     ASSERT_NE(db, nullptr);
 
     psr_result_t* r1 = psr_database_execute(db, "CREATE TABLE types (i INTEGER, f REAL, t TEXT, n INTEGER)", &error);
@@ -138,7 +138,7 @@ TEST_F(CApiTest, ValueTypes) {
 
 TEST_F(CApiTest, Transaction) {
     psr_error_t error;
-    psr_database_t* db = psr_database_open(":memory:", &error);
+    psr_database_t* db = psr_database_open(":memory:", PSR_LOG_OFF, &error);
     ASSERT_NE(db, nullptr);
 
     psr_result_t* r1 = psr_database_execute(db, "CREATE TABLE counter (value INTEGER)", &error);
@@ -167,7 +167,7 @@ TEST_F(CApiTest, Transaction) {
 
 TEST_F(CApiTest, ErrorHandling) {
     psr_error_t error;
-    psr_database_t* db = psr_database_open(":memory:", &error);
+    psr_database_t* db = psr_database_open(":memory:", PSR_LOG_OFF, &error);
     ASSERT_NE(db, nullptr);
 
     psr_result_t* result = psr_database_execute(db, "INVALID SQL", &error);
@@ -196,7 +196,7 @@ TEST_F(CApiTest, Version) {
 
 TEST_F(CApiTest, IndexOutOfRange) {
     psr_error_t error;
-    psr_database_t* db = psr_database_open(":memory:", &error);
+    psr_database_t* db = psr_database_open(":memory:", PSR_LOG_OFF, &error);
     ASSERT_NE(db, nullptr);
 
     psr_result_t* r1 = psr_database_execute(db, "CREATE TABLE test (id INTEGER)", &error);
@@ -261,7 +261,7 @@ TEST_F(CApiMigrationTest, FromSchemaBasic) {
     create_migration(2, "CREATE TABLE posts (id INTEGER PRIMARY KEY, title TEXT);");
 
     psr_error_t error;
-    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
+    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), PSR_LOG_OFF, &error);
 
     ASSERT_NE(db, nullptr);
     EXPECT_EQ(error, PSR_OK);
@@ -279,7 +279,7 @@ TEST_F(CApiMigrationTest, FromSchemaBasic) {
 
 TEST_F(CApiMigrationTest, FromSchemaEmpty) {
     psr_error_t error;
-    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), &error);
+    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), test_schema_path_.string().c_str(), PSR_LOG_OFF, &error);
 
     ASSERT_NE(db, nullptr);
     EXPECT_EQ(error, PSR_OK);
@@ -291,18 +291,18 @@ TEST_F(CApiMigrationTest, FromSchemaEmpty) {
 TEST_F(CApiMigrationTest, FromSchemaNullArgs) {
     psr_error_t error;
 
-    psr_database_t* db1 = psr_database_from_schema(nullptr, test_schema_path_.string().c_str(), &error);
+    psr_database_t* db1 = psr_database_from_schema(nullptr, test_schema_path_.string().c_str(), PSR_LOG_OFF, &error);
     EXPECT_EQ(db1, nullptr);
     EXPECT_EQ(error, PSR_ERROR_INVALID_ARGUMENT);
 
-    psr_database_t* db2 = psr_database_from_schema(test_db_path_.c_str(), nullptr, &error);
+    psr_database_t* db2 = psr_database_from_schema(test_db_path_.c_str(), nullptr, PSR_LOG_OFF, &error);
     EXPECT_EQ(db2, nullptr);
     EXPECT_EQ(error, PSR_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(CApiMigrationTest, CurrentVersionAndSetVersion) {
     psr_error_t error;
-    psr_database_t* db = psr_database_open(test_db_path_.c_str(), &error);
+    psr_database_t* db = psr_database_open(test_db_path_.c_str(), PSR_LOG_OFF, &error);
     ASSERT_NE(db, nullptr);
 
     EXPECT_EQ(psr_database_current_version(db), 0);
@@ -322,7 +322,7 @@ TEST_F(CApiMigrationTest, MigrationErrorString) {
 
 TEST_F(CApiMigrationTest, FromSchemaInvalidPath) {
     psr_error_t error;
-    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), "/nonexistent/path", &error);
+    psr_database_t* db = psr_database_from_schema(test_db_path_.c_str(), "/nonexistent/path", PSR_LOG_OFF, &error);
 
     EXPECT_EQ(db, nullptr);
     EXPECT_EQ(error, PSR_ERROR_MIGRATION);

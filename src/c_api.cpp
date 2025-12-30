@@ -7,11 +7,32 @@
 #include <string>
 #include <vector>
 
+namespace {
+
+psr::LogLevel to_cpp_log_level(psr_log_level_t level) {
+    switch (level) {
+    case PSR_LOG_DEBUG:
+        return psr::LogLevel::debug;
+    case PSR_LOG_INFO:
+        return psr::LogLevel::info;
+    case PSR_LOG_WARN:
+        return psr::LogLevel::warn;
+    case PSR_LOG_ERROR:
+        return psr::LogLevel::error;
+    case PSR_LOG_OFF:
+        return psr::LogLevel::off;
+    default:
+        return psr::LogLevel::info;
+    }
+}
+
+}  // anonymous namespace
+
 // Internal struct definitions
 struct psr_database {
     psr::Database db;
     std::string last_error;
-    explicit psr_database(const std::string& path) : db(path) {}
+    psr_database(const std::string& path, psr::LogLevel level) : db(path, level) {}
     psr_database(psr::Database&& database) : db(std::move(database)) {}
 };
 
@@ -24,7 +45,7 @@ extern "C" {
 
 // Database functions
 
-PSR_C_API psr_database_t* psr_database_open(const char* path, psr_error_t* error) {
+PSR_C_API psr_database_t* psr_database_open(const char* path, psr_log_level_t console_level, psr_error_t* error) {
     if (!path) {
         if (error)
             *error = PSR_ERROR_INVALID_ARGUMENT;
@@ -32,7 +53,7 @@ PSR_C_API psr_database_t* psr_database_open(const char* path, psr_error_t* error
     }
 
     try {
-        auto* db = new psr_database(path);
+        auto* db = new psr_database(path, to_cpp_log_level(console_level));
         if (error)
             *error = PSR_OK;
         return db;
@@ -47,7 +68,7 @@ PSR_C_API psr_database_t* psr_database_open(const char* path, psr_error_t* error
     }
 }
 
-PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path, psr_error_t* error) {
+PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path, psr_log_level_t console_level, psr_error_t* error) {
     if (!db_path || !schema_path) {
         if (error)
             *error = PSR_ERROR_INVALID_ARGUMENT;
@@ -55,7 +76,7 @@ PSR_C_API psr_database_t* psr_database_from_schema(const char* db_path, const ch
     }
 
     try {
-        auto database = psr::Database::from_schema(db_path, schema_path);
+        auto database = psr::Database::from_schema(db_path, schema_path, to_cpp_log_level(console_level));
         auto* db = new psr_database(std::move(database));
         if (error)
             *error = PSR_OK;
