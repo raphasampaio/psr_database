@@ -32,19 +32,25 @@ cmake --install build --prefix /usr/local
 
 ```
 psr_database/
-├── include/psr_database/   # Public C++ headers
-├── src/                    # Core C++ library
-├── src_c/                  # C API wrapper (extern "C")
-├── tests/                  # GoogleTest suite
-└── cmake/                  # CMake modules
+├── include/psr/        # Public headers
+│   ├── database.h      # C++ Database class
+│   ├── result.h        # C++ Result/Row/Value
+│   ├── export.h        # DLL export macros
+│   └── c/              # C API headers
+│       ├── database.h
+│       └── result.h
+├── src/                # C++ implementation
+├── c/                  # C API implementation
+├── tests/              # GoogleTest suite
+└── cmake/              # CMake modules
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│           C API (src_c/)                │
-│      psr_database_c.h - extern "C"      │
+│              C API (c/)                 │
+│   include/psr/c/*.h - extern "C"        │
 ├─────────────────────────────────────────┤
 │        Core C++ Library (src/)          │
 │   psr::Database, psr::Result, psr::Row  │
@@ -77,8 +83,8 @@ psr_database/
 
 ## Adding Features
 
-1. Add to `include/psr_database/` and `src/`
-2. Expose via C API in `src_c/`
+1. Add to `include/psr/` and `src/`
+2. Expose via C API in `include/psr/c/` and `c/`
 3. Add tests in `tests/`
 
 ## Platform Notes

@@ -51,7 +51,7 @@ target_link_libraries(myapp PRIVATE psr::database)
 ### C++ API
 
 ```cpp
-#include <psr_database/psr_database.h>
+#include <psr/database.h>
 
 psr::Database db(":memory:");
 db.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
@@ -66,7 +66,8 @@ for (const auto& row : result) {
 ### C API
 
 ```c
-#include <psr_database_c.h>
+#include <psr/c/database.h>
+#include <psr/c/result.h>
 
 psr_database_t* db = psr_database_open(":memory:", NULL);
 psr_database_execute(db, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)", NULL);
@@ -81,11 +82,17 @@ psr_database_close(db);
 
 ```
 psr_database/
-├── cmake/                  # CMake modules
-├── include/psr_database/   # Public C++ headers
-├── src/                    # Core library implementation
-├── src_c/                  # C API wrapper
-└── tests/                  # GoogleTest suite
+├── include/psr/        # Public headers
+│   ├── database.h      # C++ Database class
+│   ├── result.h        # C++ Result/Row/Value
+│   ├── export.h        # DLL export macros
+│   └── c/              # C API headers
+│       ├── database.h
+│       └── result.h
+├── src/                # C++ implementation
+├── c/                  # C API implementation
+├── tests/              # GoogleTest suite
+└── cmake/              # CMake modules
 ```
 
 ## License

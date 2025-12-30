@@ -32,7 +32,7 @@ add_subdirectory(src)
 
 # C API wrapper
 if(PSR_BUILD_C_API)
-    add_subdirectory(src_c)
+    add_subdirectory(c)
 endif()
 
 # Tests
@@ -75,8 +75,7 @@ if(CLANG_FORMAT)
     file(GLOB_RECURSE ALL_SOURCE_FILES
         ${CMAKE_SOURCE_DIR}/include/*.h
         ${CMAKE_SOURCE_DIR}/src/*.cpp
-        ${CMAKE_SOURCE_DIR}/src_c/*.h
-        ${CMAKE_SOURCE_DIR}/src_c/*.cpp
+        ${CMAKE_SOURCE_DIR}/c/*.cpp
         ${CMAKE_SOURCE_DIR}/tests/*.cpp
     )
     add_custom_target(format

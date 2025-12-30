@@ -1,4 +1,4 @@
-#include "psr_database/result.h"
+#include "psr/result.h"
 
 #include <stdexcept>
 

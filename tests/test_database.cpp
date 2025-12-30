@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <gtest/gtest.h>
-#include <psr_database/database.h>
+#include <psr/database.h>
 #include <string>
 
 namespace fs = std::filesystem;

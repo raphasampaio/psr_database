@@ -1,6 +1,5 @@
 add_library(psr_database_c SHARED
-    psr_database.cpp
-    psr_result.cpp
+    psr_c.cpp
 )
 
 target_compile_definitions(psr_database_c
@@ -11,7 +10,7 @@ target_compile_definitions(psr_database_c
 
 target_include_directories(psr_database_c
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
 
@@ -38,8 +37,6 @@ install(TARGETS psr_database_c
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-install(FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/psr_database.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/psr_result.h
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/psr/c
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/psr
 )

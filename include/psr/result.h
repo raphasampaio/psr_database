@@ -1,7 +1,7 @@
 #ifndef PSR_DATABASE_RESULT_H
 #define PSR_DATABASE_RESULT_H
 
-#include "psr_database/export.h"
+#include "export.h"
 
 #include <cstdint>
 #include <memory>

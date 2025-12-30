@@ -1,7 +1,7 @@
 #ifndef PSR_RESULT_H
 #define PSR_RESULT_H
 
-#include "psr_database.h"
+#include "database.h"
 
 #ifdef __cplusplus
 extern "C" {

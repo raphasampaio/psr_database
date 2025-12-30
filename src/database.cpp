@@ -1,4 +1,4 @@
-#include "psr_database/database.h"
+#include "psr/database.h"
 
 #include <sqlite3.h>
 #include <stdexcept>
