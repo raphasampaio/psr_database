@@ -1,7 +1,6 @@
 module TestCreate
 
 using PSRDatabase
-using SQLite
 using Dates
 using DataFrames
 using Test
