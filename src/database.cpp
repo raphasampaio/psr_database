@@ -4,6 +4,7 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
@@ -389,8 +390,355 @@ const std::string& Database::schema_path() const {
     return impl_->schema_path;
 }
 
-int64_t Database::create_element(const std::string& table,
-                                  const std::vector<std::pair<std::string, Value>>& fields) {
+// Helper to check if a Value is a vector type
+namespace {
+
+bool is_vector_value(const psr::Value& v) {
+    return std::holds_alternative<std::vector<int64_t>>(v) || std::holds_alternative<std::vector<double>>(v) ||
+           std::holds_alternative<std::vector<std::string>>(v);
+}
+
+// Convert a scalar Value to a bindable Value (handles only scalar types)
+psr::Value to_scalar_value(const psr::Value& v) {
+    return std::visit(
+        [](auto&& arg) -> psr::Value {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::vector<int64_t>> || std::is_same_v<T, std::vector<double>> ||
+                          std::is_same_v<T, std::vector<std::string>>) {
+                throw std::runtime_error("Cannot convert vector to scalar value");
+            } else {
+                return arg;
+            }
+        },
+        v);
+}
+
+// Get vector size from a Value
+size_t get_vector_size(const psr::Value& v) {
+    return std::visit(
+        [](auto&& arg) -> size_t {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::vector<int64_t>>) {
+                return arg.size();
+            } else if constexpr (std::is_same_v<T, std::vector<double>>) {
+                return arg.size();
+            } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
+                return arg.size();
+            } else {
+                return 0;
+            }
+        },
+        v);
+}
+
+// Get element at index from a vector Value
+psr::Value get_vector_element(const psr::Value& v, size_t index) {
+    return std::visit(
+        [index](auto&& arg) -> psr::Value {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::vector<int64_t>>) {
+                return arg[index];
+            } else if constexpr (std::is_same_v<T, std::vector<double>>) {
+                return arg[index];
+            } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
+                return arg[index];
+            } else {
+                throw std::runtime_error("Not a vector type");
+            }
+        },
+        v);
+}
+
+}  // anonymous namespace
+
+// Schema introspection methods
+
+std::vector<std::string> Database::get_vector_tables(const std::string& collection) const {
+    if (!is_open()) {
+        return {};
+    }
+
+    std::string prefix = collection + "_vector_";
+    auto result = const_cast<Database*>(this)->execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ?", {prefix + "%"});
+
+    std::vector<std::string> tables;
+    for (const auto& row : result) {
+        auto name = row.get_string(0);
+        if (name) {
+            tables.push_back(*name);
+        }
+    }
+    return tables;
+}
+
+std::vector<std::string> Database::get_time_series_tables(const std::string& collection) const {
+    if (!is_open()) {
+        return {};
+    }
+
+    std::string prefix = collection + "_time_series_";
+    auto result = const_cast<Database*>(this)->execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ?", {prefix + "%"});
+
+    std::vector<std::string> tables;
+    for (const auto& row : result) {
+        auto name = row.get_string(0);
+        if (name) {
+            tables.push_back(*name);
+        }
+    }
+    return tables;
+}
+
+std::vector<std::string> Database::get_table_columns(const std::string& table) const {
+    if (!is_open()) {
+        return {};
+    }
+
+    auto result = const_cast<Database*>(this)->execute("PRAGMA table_info(\"" + table + "\")");
+
+    std::vector<std::string> columns;
+    for (const auto& row : result) {
+        auto name = row.get_string(1);  // Column name is at index 1
+        if (name) {
+            columns.push_back(*name);
+        }
+    }
+    return columns;
+}
+
+std::vector<Database::ForeignKeyInfo> Database::get_foreign_keys(const std::string& table) const {
+    if (!is_open()) {
+        return {};
+    }
+
+    auto result = const_cast<Database*>(this)->execute("PRAGMA foreign_key_list(\"" + table + "\")");
+
+    std::vector<ForeignKeyInfo> fks;
+    for (const auto& row : result) {
+        ForeignKeyInfo fk;
+        fk.target_table = row.get_string(2).value_or("");   // table
+        fk.column = row.get_string(3).value_or("");         // from
+        fk.target_column = row.get_string(4).value_or("");  // to
+        if (!fk.column.empty()) {
+            fks.push_back(fk);
+        }
+    }
+    return fks;
+}
+
+int64_t Database::get_element_id(const std::string& collection, const std::string& label) const {
+    if (!is_open()) {
+        throw std::runtime_error("Database is not open");
+    }
+
+    auto result =
+        const_cast<Database*>(this)->execute("SELECT id FROM \"" + collection + "\" WHERE label = ?", {label});
+
+    if (result.empty()) {
+        throw std::runtime_error("Element not found: " + label + " in " + collection);
+    }
+
+    auto id = result[0].get_int(0);
+    if (!id) {
+        throw std::runtime_error("Invalid ID for element: " + label);
+    }
+    return *id;
+}
+
+Value Database::resolve_relation(const std::string& table, const std::string& column, const Value& value) {
+    // Get foreign key info for this column
+    auto fks = get_foreign_keys(table);
+
+    for (const auto& fk : fks) {
+        if (fk.column == column) {
+            // This column is a foreign key
+            if (std::holds_alternative<std::string>(value)) {
+                // Resolve label to ID
+                const auto& label = std::get<std::string>(value);
+                return get_element_id(fk.target_table, label);
+            } else if (std::holds_alternative<std::vector<std::string>>(value)) {
+                // Resolve vector of labels to vector of IDs
+                const auto& labels = std::get<std::vector<std::string>>(value);
+                std::vector<int64_t> ids;
+                ids.reserve(labels.size());
+                for (const auto& label : labels) {
+                    if (label.empty()) {
+                        // Empty string means NULL - use a sentinel value
+                        ids.push_back(std::numeric_limits<int64_t>::min());
+                    } else {
+                        ids.push_back(get_element_id(fk.target_table, label));
+                    }
+                }
+                return ids;
+            }
+            break;
+        }
+    }
+
+    // Not a relation or already an ID, return as-is
+    return value;
+}
+
+void Database::insert_vectors(const std::string& collection, int64_t element_id,
+                              const std::vector<std::pair<std::string, Value>>& vector_fields) {
+    if (vector_fields.empty()) {
+        return;
+    }
+
+    // Group vectors by their table
+    auto vector_tables = get_vector_tables(collection);
+
+    // Build a map of column -> table
+    std::map<std::string, std::string> column_to_table;
+    for (const auto& table : vector_tables) {
+        auto columns = get_table_columns(table);
+        for (const auto& col : columns) {
+            if (col != "id" && col != "vector_index") {
+                column_to_table[col] = table;
+            }
+        }
+    }
+
+    // Group fields by table
+    std::map<std::string, std::vector<std::pair<std::string, Value>>> table_fields;
+    for (const auto& [name, value] : vector_fields) {
+        auto it = column_to_table.find(name);
+        if (it == column_to_table.end()) {
+            throw std::runtime_error("Vector column not found in schema: " + name);
+        }
+        table_fields[it->second].emplace_back(name, value);
+    }
+
+    // Insert into each table
+    for (const auto& [table, fields] : table_fields) {
+        // Validate all vectors have same size
+        size_t vec_size = 0;
+        for (const auto& [name, value] : fields) {
+            size_t sz = get_vector_size(value);
+            if (vec_size == 0) {
+                vec_size = sz;
+            } else if (sz != vec_size) {
+                throw std::runtime_error("Vectors in same group must have same size: " + table);
+            }
+        }
+
+        if (vec_size == 0) {
+            // Empty vectors are allowed - just skip inserting anything
+            continue;
+        }
+
+        // Resolve relations for this table
+        std::vector<std::pair<std::string, Value>> resolved_fields;
+        for (const auto& [name, value] : fields) {
+            resolved_fields.emplace_back(name, resolve_relation(table, name, value));
+        }
+
+        // Get table columns to determine column order
+        auto columns = get_table_columns(table);
+
+        // Insert one row per vector index
+        for (size_t i = 0; i < vec_size; ++i) {
+            std::string sql = "INSERT INTO \"" + table + "\" (id, vector_index";
+            std::string placeholders = "?, ?";
+            std::vector<Value> values;
+            values.push_back(element_id);
+            values.push_back(static_cast<int64_t>(i + 1));  // 1-indexed
+
+            for (const auto& [name, value] : resolved_fields) {
+                sql += ", \"" + name + "\"";
+                placeholders += ", ?";
+
+                Value elem = get_vector_element(value, i);
+                // Handle sentinel value for NULL
+                if (std::holds_alternative<int64_t>(elem)) {
+                    int64_t v = std::get<int64_t>(elem);
+                    if (v == std::numeric_limits<int64_t>::min()) {
+                        values.push_back(nullptr);
+                    } else {
+                        values.push_back(elem);
+                    }
+                } else {
+                    values.push_back(elem);
+                }
+            }
+
+            sql += ") VALUES (" + placeholders + ")";
+            execute(sql, values);
+        }
+    }
+}
+
+void Database::insert_time_series(const std::string& collection, int64_t element_id,
+                                  const std::map<std::string, TimeSeries>& time_series) {
+    if (time_series.empty()) {
+        return;
+    }
+
+    for (const auto& [group, data] : time_series) {
+        if (data.empty()) {
+            continue;
+        }
+
+        std::string table = collection + "_time_series_" + group;
+
+        // Check if table exists
+        auto ts_tables = get_time_series_tables(collection);
+        bool found = false;
+        for (const auto& t : ts_tables) {
+            if (t == table) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            throw std::runtime_error("Time series group not found: " + group);
+        }
+
+        // Get row count from first column
+        size_t row_count = 0;
+        for (const auto& [col, values] : data) {
+            row_count = values.size();
+            break;
+        }
+
+        if (row_count == 0) {
+            continue;
+        }
+
+        // Validate all columns have same length
+        for (const auto& [col, values] : data) {
+            if (values.size() != row_count) {
+                throw std::runtime_error("Time series columns must have same length");
+            }
+        }
+
+        // Insert each row
+        for (size_t i = 0; i < row_count; ++i) {
+            std::string sql = "INSERT INTO \"" + table + "\" (id";
+            std::string placeholders = "?";
+            std::vector<Value> values;
+            values.push_back(element_id);
+
+            for (const auto& [col, col_values] : data) {
+                sql += ", \"" + col + "\"";
+                placeholders += ", ?";
+                values.push_back(to_scalar_value(col_values[i]));
+            }
+
+            sql += ") VALUES (" + placeholders + ")";
+            execute(sql, values);
+        }
+    }
+}
+
+int64_t Database::create_element(const std::string& table, const std::vector<std::pair<std::string, Value>>& fields) {
+    return create_element(table, fields, {});
+}
+
+int64_t Database::create_element(const std::string& table, const std::vector<std::pair<std::string, Value>>& fields,
+                                 const std::map<std::string, TimeSeries>& time_series) {
     if (!is_open()) {
         throw std::runtime_error("Database is not open");
     }
@@ -403,16 +751,33 @@ int64_t Database::create_element(const std::string& table,
         throw std::runtime_error("Fields cannot be empty");
     }
 
-    // Build INSERT statement: INSERT INTO table (col1, col2, ...) VALUES (?, ?, ...)
+    // Separate scalar fields from vector fields
+    std::vector<std::pair<std::string, Value>> scalar_fields;
+    std::vector<std::pair<std::string, Value>> vector_fields;
+
+    for (const auto& [name, value] : fields) {
+        if (is_vector_value(value)) {
+            vector_fields.emplace_back(name, value);
+        } else {
+            // Resolve scalar relations (string to ID for FK columns)
+            scalar_fields.emplace_back(name, resolve_relation(table, name, value));
+        }
+    }
+
+    // Build INSERT statement for scalar fields
+    if (scalar_fields.empty()) {
+        throw std::runtime_error("At least one scalar field is required");
+    }
+
     std::string sql = "INSERT INTO \"" + table + "\" (";
     std::string placeholders;
 
-    for (size_t i = 0; i < fields.size(); ++i) {
+    for (size_t i = 0; i < scalar_fields.size(); ++i) {
         if (i > 0) {
             sql += ", ";
             placeholders += ", ";
         }
-        sql += "\"" + fields[i].first + "\"";
+        sql += "\"" + scalar_fields[i].first + "\"";
         placeholders += "?";
     }
 
@@ -422,15 +787,23 @@ int64_t Database::create_element(const std::string& table,
 
     // Extract values for binding
     std::vector<Value> values;
-    values.reserve(fields.size());
-    for (const auto& field : fields) {
-        values.push_back(field.second);
+    values.reserve(scalar_fields.size());
+    for (const auto& [name, value] : scalar_fields) {
+        values.push_back(to_scalar_value(value));
     }
 
     // Execute the insert
     execute(sql, values);
 
-    return last_insert_rowid();
+    int64_t element_id = last_insert_rowid();
+
+    // Insert vector fields
+    insert_vectors(table, element_id, vector_fields);
+
+    // Insert time series
+    insert_time_series(table, element_id, time_series);
+
+    return element_id;
 }
 
 }  // namespace psr

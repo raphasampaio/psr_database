@@ -44,6 +44,7 @@ typedef enum {
 typedef struct psr_database psr_database_t;
 typedef struct psr_result psr_result_t;
 typedef struct psr_element psr_element_t;
+typedef struct psr_time_series psr_time_series_t;
 
 // Database functions
 PSR_C_API psr_database_t* psr_database_open(const char* path, psr_log_level_t console_level, psr_error_t* error);
@@ -72,8 +73,33 @@ PSR_C_API psr_error_t psr_element_set_int(psr_element_t* elem, const char* colum
 PSR_C_API psr_error_t psr_element_set_double(psr_element_t* elem, const char* column, double value);
 PSR_C_API psr_error_t psr_element_set_string(psr_element_t* elem, const char* column, const char* value);
 PSR_C_API psr_error_t psr_element_set_blob(psr_element_t* elem, const char* column, const uint8_t* data, size_t size);
+
+// Vector setters for element builder
+PSR_C_API psr_error_t psr_element_set_int_array(psr_element_t* elem, const char* column, const int64_t* values,
+                                                size_t count);
+PSR_C_API psr_error_t psr_element_set_double_array(psr_element_t* elem, const char* column, const double* values,
+                                                   size_t count);
+PSR_C_API psr_error_t psr_element_set_string_array(psr_element_t* elem, const char* column, const char** values,
+                                                   size_t count);
+
+// Time series functions
+PSR_C_API psr_time_series_t* psr_time_series_create(void);
+PSR_C_API void psr_time_series_free(psr_time_series_t* ts);
+PSR_C_API psr_error_t psr_time_series_add_int_column(psr_time_series_t* ts, const char* name, const int64_t* values,
+                                                     size_t count);
+PSR_C_API psr_error_t psr_time_series_add_double_column(psr_time_series_t* ts, const char* name, const double* values,
+                                                        size_t count);
+PSR_C_API psr_error_t psr_time_series_add_string_column(psr_time_series_t* ts, const char* name, const char** values,
+                                                        size_t count);
+PSR_C_API psr_error_t psr_element_add_time_series(psr_element_t* elem, const char* group, psr_time_series_t* ts);
+
+// Element creation
 PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* table, psr_element_t* elem,
-                                               psr_error_t* error);
+                                              psr_error_t* error);
+
+// Element lookup
+PSR_C_API int64_t psr_database_get_element_id(psr_database_t* db, const char* collection, const char* label,
+                                              psr_error_t* error);
 
 // Utility functions
 PSR_C_API const char* psr_error_string(psr_error_t error);

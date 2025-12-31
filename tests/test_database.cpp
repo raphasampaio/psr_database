@@ -395,8 +395,7 @@ TEST_F(CreateElementTest, InsertWithOptionalFields) {
 
 TEST_F(CreateElementTest, InsertWithNullValue) {
     int64_t id = db_->create_element(
-        "Configuration",
-        {{"label", std::string("Config 1")}, {"value1", 50.0}, {"date_time_value2", nullptr}});
+        "Configuration", {{"label", std::string("Config 1")}, {"value1", 50.0}, {"date_time_value2", nullptr}});
 
     EXPECT_EQ(id, 1);
 
@@ -454,7 +453,6 @@ TEST_F(CreateElementTest, ThrowsOnNonexistentTable) {
 
 TEST_F(CreateElementTest, ThrowsOnNonexistentColumn) {
     // "type3" doesn't exist, should be "type"
-    EXPECT_THROW(
-        db_->create_element("Resource", {{"label", std::string("Resource 4")}, {"type3", std::string("E")}}),
-        std::runtime_error);
+    EXPECT_THROW(db_->create_element("Resource", {{"label", std::string("Resource 4")}, {"type3", std::string("E")}}),
+                 std::runtime_error);
 }

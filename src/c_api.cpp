@@ -3,6 +3,7 @@
 #include "psr/database.h"
 #include "psr/result.h"
 
+#include <map>
 #include <new>
 #include <string>
 #include <utility>
@@ -42,8 +43,13 @@ struct psr_result {
     explicit psr_result(psr::Result r) : result(std::move(r)) {}
 };
 
+struct psr_time_series {
+    psr::TimeSeries data;
+};
+
 struct psr_element {
     std::vector<std::pair<std::string, psr::Value>> fields;
+    std::map<std::string, psr::TimeSeries> time_series;
 };
 
 extern "C" {
@@ -290,8 +296,115 @@ PSR_C_API psr_error_t psr_element_set_blob(psr_element_t* elem, const char* colu
     return PSR_OK;
 }
 
+// Vector setters
+
+PSR_C_API psr_error_t psr_element_set_int_array(psr_element_t* elem, const char* column, const int64_t* values,
+                                                size_t count) {
+    if (!elem || !column)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    std::vector<int64_t> vec;
+    if (values && count > 0) {
+        vec.assign(values, values + count);
+    }
+    elem->fields.emplace_back(column, std::move(vec));
+    return PSR_OK;
+}
+
+PSR_C_API psr_error_t psr_element_set_double_array(psr_element_t* elem, const char* column, const double* values,
+                                                   size_t count) {
+    if (!elem || !column)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    std::vector<double> vec;
+    if (values && count > 0) {
+        vec.assign(values, values + count);
+    }
+    elem->fields.emplace_back(column, std::move(vec));
+    return PSR_OK;
+}
+
+PSR_C_API psr_error_t psr_element_set_string_array(psr_element_t* elem, const char* column, const char** values,
+                                                   size_t count) {
+    if (!elem || !column)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    std::vector<std::string> vec;
+    if (values && count > 0) {
+        vec.reserve(count);
+        for (size_t i = 0; i < count; ++i) {
+            vec.push_back(values[i] ? values[i] : "");
+        }
+    }
+    elem->fields.emplace_back(column, std::move(vec));
+    return PSR_OK;
+}
+
+// Time series functions
+
+PSR_C_API psr_time_series_t* psr_time_series_create(void) {
+    try {
+        return new psr_time_series();
+    } catch (const std::bad_alloc&) {
+        return nullptr;
+    }
+}
+
+PSR_C_API void psr_time_series_free(psr_time_series_t* ts) {
+    delete ts;
+}
+
+PSR_C_API psr_error_t psr_time_series_add_int_column(psr_time_series_t* ts, const char* name, const int64_t* values,
+                                                     size_t count) {
+    if (!ts || !name)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    std::vector<psr::Value> vec;
+    if (values && count > 0) {
+        vec.reserve(count);
+        for (size_t i = 0; i < count; ++i) {
+            vec.push_back(values[i]);
+        }
+    }
+    ts->data[name] = std::move(vec);
+    return PSR_OK;
+}
+
+PSR_C_API psr_error_t psr_time_series_add_double_column(psr_time_series_t* ts, const char* name, const double* values,
+                                                        size_t count) {
+    if (!ts || !name)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    std::vector<psr::Value> vec;
+    if (values && count > 0) {
+        vec.reserve(count);
+        for (size_t i = 0; i < count; ++i) {
+            vec.push_back(values[i]);
+        }
+    }
+    ts->data[name] = std::move(vec);
+    return PSR_OK;
+}
+
+PSR_C_API psr_error_t psr_time_series_add_string_column(psr_time_series_t* ts, const char* name, const char** values,
+                                                        size_t count) {
+    if (!ts || !name)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    std::vector<psr::Value> vec;
+    if (values && count > 0) {
+        vec.reserve(count);
+        for (size_t i = 0; i < count; ++i) {
+            vec.push_back(std::string(values[i] ? values[i] : ""));
+        }
+    }
+    ts->data[name] = std::move(vec);
+    return PSR_OK;
+}
+
+PSR_C_API psr_error_t psr_element_add_time_series(psr_element_t* elem, const char* group, psr_time_series_t* ts) {
+    if (!elem || !group || !ts)
+        return PSR_ERROR_INVALID_ARGUMENT;
+    elem->time_series[group] = ts->data;
+    return PSR_OK;
+}
+
 PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* table, psr_element_t* elem,
-                                               psr_error_t* error) {
+                                              psr_error_t* error) {
     if (!db || !table || !elem) {
         if (error)
             *error = PSR_ERROR_INVALID_ARGUMENT;
@@ -299,10 +412,36 @@ PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* ta
     }
 
     try {
-        int64_t rowid = db->db.create_element(table, elem->fields);
+        int64_t rowid;
+        if (elem->time_series.empty()) {
+            rowid = db->db.create_element(table, elem->fields);
+        } else {
+            rowid = db->db.create_element(table, elem->fields, elem->time_series);
+        }
         if (error)
             *error = PSR_OK;
         return rowid;
+    } catch (const std::exception& e) {
+        db->last_error = e.what();
+        if (error)
+            *error = PSR_ERROR_QUERY;
+        return 0;
+    }
+}
+
+PSR_C_API int64_t psr_database_get_element_id(psr_database_t* db, const char* collection, const char* label,
+                                              psr_error_t* error) {
+    if (!db || !collection || !label) {
+        if (error)
+            *error = PSR_ERROR_INVALID_ARGUMENT;
+        return 0;
+    }
+
+    try {
+        int64_t id = db->db.get_element_id(collection, label);
+        if (error)
+            *error = PSR_OK;
+        return id;
     } catch (const std::exception& e) {
         db->last_error = e.what();
         if (error)

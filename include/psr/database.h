@@ -5,6 +5,7 @@
 #include "result.h"
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -55,13 +56,41 @@ public:
     void migrate_up();
     const std::string& schema_path() const;
 
-    // Element creation
-    int64_t create_element(const std::string& table,
-                           const std::vector<std::pair<std::string, Value>>& fields);
+    // Element creation (supports scalars, vectors, and time series)
+    int64_t create_element(const std::string& table, const std::vector<std::pair<std::string, Value>>& fields);
+
+    // Element creation with time series support
+    int64_t create_element(const std::string& table, const std::vector<std::pair<std::string, Value>>& fields,
+                           const std::map<std::string, TimeSeries>& time_series);
+
+    // Lookup element ID by label
+    int64_t get_element_id(const std::string& collection, const std::string& label) const;
 
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
+
+    // Schema introspection
+    std::vector<std::string> get_vector_tables(const std::string& collection) const;
+    std::vector<std::string> get_time_series_tables(const std::string& collection) const;
+    std::vector<std::string> get_table_columns(const std::string& table) const;
+
+    // Foreign key introspection
+    struct ForeignKeyInfo {
+        std::string column;
+        std::string target_table;
+        std::string target_column;
+    };
+    std::vector<ForeignKeyInfo> get_foreign_keys(const std::string& table) const;
+
+    // Vector/time series insertion helpers
+    void insert_vectors(const std::string& collection, int64_t element_id,
+                        const std::vector<std::pair<std::string, Value>>& vector_fields);
+    void insert_time_series(const std::string& collection, int64_t element_id,
+                            const std::map<std::string, TimeSeries>& time_series);
+
+    // Relation resolution
+    Value resolve_relation(const std::string& table, const std::string& column, const Value& value);
 };
 
 }  // namespace psr

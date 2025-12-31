@@ -419,8 +419,7 @@ TEST_F(CApiElementTest, ElementSetNull) {
     EXPECT_EQ(error, PSR_OK);
     EXPECT_EQ(id, 1);
 
-    psr_result_t* result =
-        psr_database_execute(db_, "SELECT date_time_value2 FROM Configuration WHERE id = 1", &error);
+    psr_result_t* result = psr_database_execute(db_, "SELECT date_time_value2 FROM Configuration WHERE id = 1", &error);
     EXPECT_EQ(psr_result_is_null(result, 0, 0), 1);
     psr_result_free(result);
 }

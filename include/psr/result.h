@@ -4,6 +4,7 @@
 #include "export.h"
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -12,7 +13,16 @@
 
 namespace psr {
 
-using Value = std::variant<std::nullptr_t, int64_t, double, std::string, std::vector<uint8_t>>;
+// Scalar value types
+using Value = std::variant<std::nullptr_t, int64_t, double, std::string,
+                           std::vector<uint8_t>,     // blob
+                           std::vector<int64_t>,     // int array (for vectors)
+                           std::vector<double>,      // double array (for vectors)
+                           std::vector<std::string>  // string array (for vectors/relations)
+                           >;
+
+// Time series data (column-oriented DataFrame)
+using TimeSeries = std::map<std::string, std::vector<Value>>;
 
 class PSR_API Row {
 public:

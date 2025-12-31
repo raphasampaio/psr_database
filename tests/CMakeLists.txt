@@ -2,6 +2,7 @@ include(GoogleTest)
 
 add_executable(psr_database_tests
     test_database.cpp
+    test_database_create.cpp
     test_result.cpp
 )
 
