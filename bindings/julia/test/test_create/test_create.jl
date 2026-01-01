@@ -197,7 +197,7 @@ end
 
 function test_create_scalar_parameter_date()
     path_schema = joinpath(@__DIR__, "test_create_scalar_parameter_date.sql")
-    db_path = joinpath(@__DIR__, "test_create_scalar_parameter_date.sqlite")
+    db_path = joinpath(tempdir(), "test_create_scalar_parameter_date_$(rand(10000:99999)).sqlite")
     db = PSRDatabase.create_empty_db_from_schema(db_path, path_schema; force = true)
     PSRDatabase.create_element!(
         db,

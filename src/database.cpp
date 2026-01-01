@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <set>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
@@ -472,6 +473,25 @@ std::vector<std::string> Database::get_vector_tables(const std::string& collecti
     return tables;
 }
 
+std::vector<std::string> Database::get_set_tables(const std::string& collection) const {
+    if (!is_open()) {
+        return {};
+    }
+
+    std::string prefix = collection + "_set_";
+    auto result = const_cast<Database*>(this)->execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ?", {prefix + "%"});
+
+    std::vector<std::string> tables;
+    for (const auto& row : result) {
+        auto name = row.get_string(0);
+        if (name) {
+            tables.push_back(*name);
+        }
+    }
+    return tables;
+}
+
 std::vector<std::string> Database::get_time_series_tables(const std::string& collection) const {
     if (!is_open()) {
         return {};
@@ -526,6 +546,73 @@ std::vector<Database::ForeignKeyInfo> Database::get_foreign_keys(const std::stri
         }
     }
     return fks;
+}
+
+std::string Database::get_column_type(const std::string& table, const std::string& column) const {
+    if (!is_open()) {
+        return "";
+    }
+
+    auto result = const_cast<Database*>(this)->execute("PRAGMA table_info(\"" + table + "\")");
+
+    for (const auto& row : result) {
+        auto col_name = row.get_string(1);  // name is at index 1
+        if (col_name && *col_name == column) {
+            return row.get_string(2).value_or("");  // type is at index 2
+        }
+    }
+    return "";
+}
+
+void Database::validate_value_type(const std::string& table, const std::string& column, const Value& value) {
+    std::string col_type = get_column_type(table, column);
+    if (col_type.empty()) {
+        return;  // Column not found, let SQLite handle it
+    }
+
+    // Skip validation for foreign key columns - they accept string labels that get resolved to IDs
+    auto fks = get_foreign_keys(table);
+    for (const auto& fk : fks) {
+        if (fk.column == column) {
+            return;  // This is a FK column, skip type validation
+        }
+    }
+
+    // Null is always valid
+    if (std::holds_alternative<std::nullptr_t>(value)) {
+        return;
+    }
+
+    bool valid = true;
+    std::string actual_type;
+
+    if (std::holds_alternative<int64_t>(value)) {
+        actual_type = "INTEGER";
+    } else if (std::holds_alternative<double>(value)) {
+        actual_type = "REAL";
+    } else if (std::holds_alternative<std::string>(value)) {
+        actual_type = "TEXT";
+    } else if (std::holds_alternative<std::vector<uint8_t>>(value)) {
+        actual_type = "BLOB";
+    } else {
+        return;  // Vector types are handled separately
+    }
+
+    // Check type compatibility
+    if (col_type == "TEXT") {
+        valid = (actual_type == "TEXT");
+    } else if (col_type == "INTEGER") {
+        valid = (actual_type == "INTEGER");
+    } else if (col_type == "REAL") {
+        valid = (actual_type == "REAL" || actual_type == "INTEGER");  // INTEGER can be REAL
+    } else if (col_type == "BLOB") {
+        valid = (actual_type == "BLOB");
+    }
+
+    if (!valid) {
+        throw std::runtime_error("Type mismatch for column '" + column + "': expected " + col_type + " but got " +
+                                 actual_type);
+    }
 }
 
 int64_t Database::get_element_id(const std::string& collection, const std::string& label) const {
@@ -587,15 +674,28 @@ void Database::insert_vectors(const std::string& collection, int64_t element_id,
         return;
     }
 
-    // Group vectors by their table
+    // Group vectors by their table (check both _vector_ and _set_ tables)
     auto vector_tables = get_vector_tables(collection);
+    auto set_tables = get_set_tables(collection);
 
-    // Build a map of column -> table
+    // Build a map of column -> table and track which are set tables
     std::map<std::string, std::string> column_to_table;
+    std::set<std::string> is_set_table;
+
     for (const auto& table : vector_tables) {
         auto columns = get_table_columns(table);
         for (const auto& col : columns) {
             if (col != "id" && col != "vector_index") {
+                column_to_table[col] = table;
+            }
+        }
+    }
+
+    for (const auto& table : set_tables) {
+        is_set_table.insert(table);
+        auto columns = get_table_columns(table);
+        for (const auto& col : columns) {
+            if (col != "id") {
                 column_to_table[col] = table;
             }
         }
@@ -613,6 +713,8 @@ void Database::insert_vectors(const std::string& collection, int64_t element_id,
 
     // Insert into each table
     for (const auto& [table, fields] : table_fields) {
+        bool is_set = is_set_table.count(table) > 0;
+
         // Validate all vectors have same size
         size_t vec_size = 0;
         for (const auto& [name, value] : fields) {
@@ -640,11 +742,22 @@ void Database::insert_vectors(const std::string& collection, int64_t element_id,
 
         // Insert one row per vector index
         for (size_t i = 0; i < vec_size; ++i) {
-            std::string sql = "INSERT INTO \"" + table + "\" (id, vector_index";
-            std::string placeholders = "?, ?";
+            std::string sql;
+            std::string placeholders;
             std::vector<Value> values;
-            values.push_back(element_id);
-            values.push_back(static_cast<int64_t>(i + 1));  // 1-indexed
+
+            if (is_set) {
+                // Set tables don't have vector_index
+                sql = "INSERT INTO \"" + table + "\" (id";
+                placeholders = "?";
+                values.push_back(element_id);
+            } else {
+                // Vector tables have vector_index
+                sql = "INSERT INTO \"" + table + "\" (id, vector_index";
+                placeholders = "?, ?";
+                values.push_back(element_id);
+                values.push_back(static_cast<int64_t>(i + 1));  // 1-indexed
+            }
 
             for (const auto& [name, value] : resolved_fields) {
                 sql += ", \"" + name + "\"";
@@ -759,6 +872,8 @@ int64_t Database::create_element(const std::string& table, const std::vector<std
         if (is_vector_value(value)) {
             vector_fields.emplace_back(name, value);
         } else {
+            // Validate type before resolving relations
+            validate_value_type(table, name, value);
             // Resolve scalar relations (string to ID for FK columns)
             scalar_fields.emplace_back(name, resolve_relation(table, name, value));
         }

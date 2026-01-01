@@ -139,7 +139,20 @@ function create_empty_db_from_schema(
     log_level::Cint=PSR_LOG_OFF
 )
     if force && isfile(db_path)
-        rm(db_path)
+        # On Windows, SQLite files can remain locked briefly after closing
+        # Retry deletion with GC to help release handles
+        for attempt in 1:5
+            try
+                GC.gc()
+                rm(db_path)
+                break
+            catch e
+                if attempt == 5
+                    rethrow()
+                end
+                sleep(0.1 * attempt)
+            end
+        end
     end
 
     if isfile(db_path)
@@ -383,26 +396,26 @@ Validate that a string is a valid date/datetime format.
 Accepts: "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS"
 """
 function validate_date_string(column::String, value::AbstractString)
-    # Try parsing as DateTime first
-    date_formats = [
-        dateformat"yyyy-mm-dd HH:MM:SS",
-        dateformat"yyyy-mm-dd",
-    ]
-    for fmt in date_formats
-        try
-            Dates.DateTime(value, fmt)
-            return  # Valid format
-        catch
-            continue
-        end
+    # Use regex to validate format strictly
+    # Pattern for YYYY-MM-DD HH:MM:SS
+    datetime_pattern = r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$"
+    # Pattern for YYYY-MM-DD
+    date_pattern = r"^\d{4}-\d{2}-\d{2}$"
+
+    if !occursin(datetime_pattern, value) && !occursin(date_pattern, value)
+        throw(DatabaseException("Invalid date format for column '$column': $value. Expected 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'"))
     end
-    # Also try Date format
+
+    # Also validate that it parses to a real date (e.g., not month 13)
     try
-        Dates.Date(value, dateformat"yyyy-mm-dd")
-        return  # Valid format
+        if occursin(datetime_pattern, value)
+            Dates.DateTime(value, dateformat"yyyy-mm-dd HH:MM:SS")
+        else
+            Dates.Date(value, dateformat"yyyy-mm-dd")
+        end
     catch
+        throw(DatabaseException("Invalid date value for column '$column': $value. Date components out of range."))
     end
-    throw(DatabaseException("Invalid date format for column '$column': $value. Expected 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'"))
 end
 
 function element_set!(builder::ElementBuilder, column::String, value::DateTime)

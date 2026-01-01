@@ -72,6 +72,7 @@ private:
 
     // Schema introspection
     std::vector<std::string> get_vector_tables(const std::string& collection) const;
+    std::vector<std::string> get_set_tables(const std::string& collection) const;
     std::vector<std::string> get_time_series_tables(const std::string& collection) const;
     std::vector<std::string> get_table_columns(const std::string& table) const;
 
@@ -91,6 +92,10 @@ private:
 
     // Relation resolution
     Value resolve_relation(const std::string& table, const std::string& column, const Value& value);
+
+    // Type validation
+    std::string get_column_type(const std::string& table, const std::string& column) const;
+    void validate_value_type(const std::string& table, const std::string& column, const Value& value);
 };
 
 }  // namespace psr
